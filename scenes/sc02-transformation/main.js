@@ -1,6 +1,6 @@
 // =====================================================================
 //  main.js  -  SC-02 Interlude: "The Transformation"
-//              (uses IMG-004 and the top half of IMG-005)
+//              (uses IMG-004, then IMG-005: top half, then bottom half)
 // =====================================================================
 //
 //  THE PLAN (times in seconds after the viewer taps Play)
@@ -16,7 +16,13 @@
 //        man and dashed outline, faster and faster, with sparkles and a
 //        drum-roll.
 //   28   TA-DA! White flash, CUT to the finished potato (top of IMG-005).
-//   36   Fade out; Replay and "back to the opening" buttons appear.
+//   35   CUT to the bottom half of IMG-005 (IMG-006 is its close-up),
+//        with the text, faces and names all hidden. Hold.
+//   39   The text on the left appears, line by line from the top.
+//   45   POP! Each head and name pops in, one at a time, each pop a
+//        little quicker (and higher) than the one before.
+//   51   Star Wars crawl: "Now onto our grandest adventure!"
+//   64   Fade out; the end of scene 2.
 //
 //  Change the numbers in TIMES to re-time the whole scene.
 // =====================================================================
@@ -33,7 +39,11 @@
     cutToMagic: 21,
     spinStarts: 23,
     tada: 28,
-    fadeOut: 36,
+    cutToSpuds: 35,
+    spudText: 39,
+    pops: 45,
+    crawl: 51,
+    fadeOut: 64,
   };
 
   const W = 1280, H = 900;          // size of the picture area
@@ -64,6 +74,12 @@
       pic("magic_blank", "magic_blank.jpg");
       pic("outline", "outline.png");
       pic("final", "final.jpg");
+    pic("spuds_blank", "spuds_blank.jpg");
+    pic("spud_text", "spud_text.png");
+    for (const p of L.people) {                    // a head and a name for each person
+      pic("head_" + p.name, "head_" + p.name + ".png");
+      pic("name_" + p.name, "name_" + p.name + ".png");
+    }
     }
 
     // ---- 2. Set up, then wait for the Play tap ------------------------
@@ -207,11 +223,69 @@
       // The gallery music comes back, gently, after the fanfare.
       this.at(2.2, () => GalleryMusic.start(TIMES.fadeOut - TIMES.tada));
 
-      this.at(TIMES.fadeOut - TIMES.tada, () => {
-        GalleryMusic.fadeOut(2);
-        this.cameras.main.fadeOut(2000, 0, 0, 0);
-        this.cameras.main.once("camerafadeoutcomplete", () => showEnd());   // in index.html
+      this.at(TIMES.cutToSpuds - TIMES.tada, () => { this.cut(); this.showSpuds(); });
+    }
+
+    // ---- SHOT 5: the whole Titanic Club, as spuds ------------------------
+    showSpuds() {
+      const t0 = TIMES.cutToSpuds;
+      this.add.image(0, 0, "spuds_blank").setOrigin(0);   // nobody there yet
+
+      // The text on the left: hidden, then shown line by line from the top.
+      const text = this.add.image(L.spud_text.x, L.spud_text.y, "spud_text").setOrigin(0);
+      text.setCrop(0, 0, text.width, 0);                // nothing showing yet
+      this.at(TIMES.spudText - t0, () => {
+        const reveal = { h: 0 };
+        this.tweens.add({
+          targets: reveal, h: text.height, duration: 3000, ease: "Linear",
+          onUpdate: () => text.setCrop(0, 0, text.width, reveal.h),
+        });
       });
+
+      // POP! One person at a time: head and name together.
+      // 'gap' is the wait before the next pop; it shrinks each time.
+      this.at(TIMES.pops - t0, () => {
+        let when = 0, gap = 0.9;
+        L.people.forEach((p, i) => {
+          this.at(when, () => this.popIn(p, i));
+          when += gap;
+          gap *= 0.85;                                   // 15% quicker each time
+        });
+      });
+
+      // The Star Wars crawl (HTML, like the opening), over a darkened picture.
+      // (setDepth(10) keeps the dark sheet in FRONT of the heads, even
+      //  though the heads are added later.)
+      const night = this.add.rectangle(0, 0, W, H, 0x000000).setOrigin(0).setAlpha(0).setDepth(10);
+      this.at(TIMES.crawl - t0, () => {
+        this.tweens.add({ targets: night, alpha: 0.6, duration: 2000 });
+        startEndCrawl();                                 // in index.html
+      });
+
+      this.at(TIMES.fadeOut - t0, () => {
+        GalleryMusic.fadeOut(2.5);
+        this.cameras.main.fadeOut(2500, 0, 0, 0);
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+          stopEndCrawl();                                // in index.html
+          showEnd();                                     // in index.html
+        });
+      });
+    }
+
+    // Pop one person into existence: the head grows from nothing with a
+    // little overshoot, the name follows a moment later.
+    popIn(person, number) {
+      GalleryMusic.pop(number);
+      const head = this.add.image(person.head.x, person.head.y, "head_" + person.name);
+      const name = this.add.image(person.label.x, person.label.y, "name_" + person.name);
+      for (const sprite of [head, name]) {
+        // Grow from the middle: move the origin to the centre, and the
+        // position by half the size to match, so it lands in the same spot.
+        sprite.setOrigin(0.5).setPosition(sprite.x + sprite.width / 2, sprite.y + sprite.height / 2);
+        sprite.setScale(0);
+      }
+      this.tweens.add({ targets: head, scale: 1, duration: 300, ease: "Back.easeOut" });
+      this.tweens.add({ targets: name, scale: 1, duration: 250, delay: 80, ease: "Back.easeOut" });
     }
 
     // ---- Helpers ------------------------------------------------------------

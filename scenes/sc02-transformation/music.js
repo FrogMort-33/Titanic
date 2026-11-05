@@ -1,6 +1,6 @@
 // =====================================================================
 //  music.js  -  SC-02 "The Transformation": gentle 8-bit gallery music,
-//               a drum-roll for the spin, and a big TA-DA!
+//               a drum-roll for the spin, a big TA-DA, and POPs!
 // =====================================================================
 //
 //  The mood is "quiet art gallery on children's telly": slow, dreamy,
@@ -166,6 +166,24 @@ const GalleryMusic = (() => {
         gap = Math.max(0.045, gap * 0.93);            // each gap a bit shorter
         pitch *= 1.025;                               // each beep a bit higher
       }
+    },
+
+    // POP! A quick "bloop" that slides upwards. 'number' 0, 1, 2 ...
+    // makes each pop a little higher than the one before.
+    pop(number = 0) {
+      wake();
+      const t = ctx.currentTime;
+      const start = 300 * Math.pow(1.06, number);     // each one 6% higher
+      const osc = ctx.createOscillator();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(start, t);
+      osc.frequency.exponentialRampToValueAtTime(start * 3, t + 0.09);  // the slide up
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.12, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      osc.connect(gain).connect(fx);
+      osc.start(t);
+      osc.stop(t + 0.13);
     },
 
     // TA-DA! A short "ta" then a big long "DAAA", like a little brass band:

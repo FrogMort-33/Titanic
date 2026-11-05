@@ -25,10 +25,28 @@
            align-items: center; justify-content: center; flex-wrap: wrap; }
     #end[hidden] { display: none; }
     #end .button { position: static; transform: none; text-decoration: none; }
+
+    /* ---- Star Wars crawl at the very end (same idea as the opening's):
+       'perspective' makes a 3D space; tilting the text back (rotateX)
+       makes it shrink into the distance as it moves up the screen.   */
+    #endcrawl { position: absolute; inset: 0; perspective: 360px; overflow: hidden;
+                pointer-events: none; z-index: 2; }
+    #endcrawl .tilt { position: absolute; left: 12%; right: 12%; top: 0; bottom: 0;
+                      transform-origin: 50% 100%; transform: rotateX(26deg); }
+    #endcrawl .text { position: absolute; top: 100%; width: 100%; text-align: center;
+                      color: #ffe81f; text-shadow: 0 0 12px rgba(0,0,0,.8);
+                      font-size: 9vmin; line-height: 1.1; letter-spacing: .04em; }
+    #endcrawl.go .text { animation: endcrawl 13s linear forwards; }
+    @keyframes endcrawl { to { top: -110%; } }
+    #endcrawl.gone { opacity: 0; transition: opacity .5s; }
   </style>
 </head>
 <body>
   <div id="stage">
+    <!-- The words at the bottom of page 5, as a Star Wars crawl -->
+    <div id="endcrawl"><div class="tilt"><div class="text">
+      Now onto our<br>grandest<br>adventure!
+    </div></div></div>
     <button class="button" id="play">&#9654; Play</button>
     <!-- Quick test buttons: just the music, or just the TA-DA -->
     <button class="small" id="tune">&#127925; Music only</button>
@@ -49,6 +67,11 @@
   <script src="main.js"></script>
 
   <script>
+    // The end-of-scene crawl (called from scenes/sc02-transformation/main.js)
+    const endcrawl = document.getElementById("endcrawl");
+    function startEndCrawl() { endcrawl.classList.add("go"); }
+    function stopEndCrawl()  { endcrawl.classList.add("gone"); }
+
     // Called from main.js when the scene has finished.
     function showEnd() { document.getElementById("end").hidden = false; }
 
