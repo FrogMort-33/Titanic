@@ -21,11 +21,12 @@
 //   26   The words write in: "The Titanic Club kept their cool, unlike
 //        the petrified lady above, portrayed by a broad bean."
 //   31   SCREAM! The broad bean pops up from behind her seat and ducks
-//        down again, several times (TIMES.screams), and the green spud
-//        below her pulls a face each time.
+//        down again, several times (TIMES.screams), eyes wide and mouth
+//        stretching open with each scream.
 //
 //   PART 3 - life-affirming turbulence (IMG-009)
-//   39.5 CUT to IMG-009. The middle plane goes BOING on its spring.
+//   39.5 CUT to IMG-009. The middle plane goes BOING on its spring,
+//        bouncing its way across the screen from left to right.
 //        Only "...arrived in a dark, closed airport," is showing.
 //   44.5 The rest of the words write in. Hold 5.
 //   52   Fade out: the end of scene 3.
@@ -181,20 +182,22 @@
       this.at(TIMES.cabinText - t0, () => this.writeIn(words, 3500));
 
       // The broad bean hides behind her seat. She "pops up" by growing
-      // upwards from the seat edge: her origin is at her bottom, and her
-      // height (scaleY) goes from 0 (hidden) to 1 (all of her).
-      const bean = this.addSprite("bean");
-      bean.setOrigin(0.5, 1).setPosition(bean.x + bean.width / 2, bean.y + bean.height);
+      // upwards from the seat edge. She lives in a "container" (a box that
+      // holds several things and moves/scales them together): her picture
+      // plus her screaming face. The container's (0,0) point is at her
+      // bottom middle, so squashing its height (scaleY) from 0 to 1 makes
+      // her rise up out of the seat, face and all.
+      const b = L.bean, bw = 202, bh = 212;                // her picture is 202 x 212
+      const bean = this.add.container(b.x + bw / 2, b.y + bh).setDepth(DEPTH.bean);
+      bean.add(this.add.image(-bw / 2, -bh, "bean").setOrigin(0));
+      bean.face = this.makeScreamFace(bean);
       bean.setScale(1, 0);
       // Her hands cover two short bits of the seat's edge in the picture,
       // so draw that edge line back in, behind her.
       const [[ax, ay], [bx, by]] = L.seat_edge;
       this.add.line(0, 0, ax, ay, bx, by, 0x1d1b14).setOrigin(0).setLineWidth(2.5).setDepth(0.5);
 
-      // The green spud's screaming face (drawn on top of her real face)
-      const face = this.makeScreamFace();
-
-      TIMES.screams.forEach((t) => this.at(t - t0, () => this.scream(bean, face)));
+      TIMES.screams.forEach((t) => this.at(t - t0, () => this.scream(bean)));
 
       this.at(TIMES.turbulence - t0, () => { this.cut(); this.showTurbulence(); });
     }
@@ -208,33 +211,36 @@
       this.time.delayedCall(520, () => flash.setVisible(false));
     }
 
-    // One scream: the bean pops up, the green spud pulls a face, then
-    // both go back to normal.
-    scream(bean, face) {
+    // One scream: the bean pops up, wiggles and screams with her mouth
+    // stretching wide open, then ducks back down behind her seat.
+    scream(bean) {
       FlightSounds.scream();
       this.tweens.add({ targets: bean, scaleY: 1, duration: 160, ease: "Back.easeOut" });
       this.tweens.add({ targets: bean, angle: { from: -4, to: 4 }, duration: 70, yoyo: true, repeat: 6 });
+      // the mouth: AAAH (wide) - ah (smaller) - AAAGH (wide) - shut
+      this.tweens.chain({ targets: bean.face.mouth, tweens: [
+        { scaleY: 1.6, scaleX: 1.2, duration: 120 },
+        { scaleY: 1.0, scaleX: 1.0, duration: 200, delay: 300 },
+        { scaleY: 1.7, scaleX: 1.25, duration: 100 },
+        { scaleY: 0.5, scaleX: 0.8, duration: 300, delay: 150 },
+      ]});
       this.time.delayedCall(1000, () =>
         this.tweens.add({ targets: bean, scaleY: 0, angle: 0, duration: 160, ease: "Back.easeIn" }));
-      face.setVisible(true);
-      this.tweens.add({ targets: face, x: face.x + 3, duration: 40, yoyo: true, repeat: 12 });
-      this.tweens.add({ targets: face.mouth, scaleY: { from: 0.4, to: 1.3 }, duration: 250, yoyo: true, repeat: 1 });
-      this.time.delayedCall(1100, () => face.setVisible(false));
     }
 
-    // Big round eyes and a wide-open mouth, made from simple shapes.
-    // They sit exactly over the green spud's own face (positions from
-    // layout.js) and are only shown while she's screaming.
-    makeScreamFace() {
-      const f = L.spud_face, r = f.size;
-      const face = this.add.container(0, 0).setDepth(3).setVisible(false);
-      for (const [x, y] of [f.eye1, f.eye2]) {
-        face.add(this.add.circle(x, y, r * 1.3, 0xffffff).setStrokeStyle(3, 0x1d1b14));  // eye white
-        face.add(this.add.circle(x, y, r * 0.45, 0x1d1b14));                             // pupil
+    // The broad bean's screaming face: big round staring eyes and a dark
+    // open mouth, made from simple shapes and drawn over her own little
+    // face. Positions are measured on her picture, counting from her
+    // bottom middle (the container's 0,0), so they move with her.
+    makeScreamFace(bean) {
+      const face = {};
+      for (const [x, y] of [[-16, -153], [14, -174]]) {        // left eye, right eye
+        bean.add(this.add.circle(x, y, 8, 0xffffff).setStrokeStyle(2, 0x1d1b14));   // eye white
+        bean.add(this.add.circle(x, y, 3, 0x1d1b14));                               // pupil
       }
-      face.mouth = this.add.ellipse(f.mouth[0], f.mouth[1] + r, r * 1.6, r * 2.6, 0x3a1010)
-        .setStrokeStyle(3, 0x1d1b14);
-      face.add(face.mouth);
+      face.mouth = this.add.ellipse(23, -148, 16, 20, 0x3a1010).setStrokeStyle(2.5, 0x1d1b14);
+      face.mouth.setScale(0.5, 0.5);                           // starts small
+      bean.add(face.mouth);
       return face;
     }
 
@@ -259,6 +265,15 @@
       page.add(spring);
       this.boingForever(spring);
 
+      // ...and it travels across the screen from left to right while it
+      // boings: start just off the left edge, end just off the right edge.
+      // (The page is shrunk by k and shifted by page.x, so screen edges
+      // are converted into "page" numbers first.)
+      const leftEdge = -page.x / k - img.width / 2;
+      const rightEdge = (W - page.x) / k + img.width / 2;
+      spring.x = leftEdge;
+      this.tweens.add({ targets: spring, x: rightEdge, duration: 6000, repeat: -1 });
+
       // The rest of the words, hidden until later
       const rest1 = this.add.image(L.text_rest1.x, L.text_rest1.y, "text_rest1").setOrigin(0);
       const rest2 = this.add.image(L.text_rest2.x, L.text_rest2.y, "text_rest2").setOrigin(0);
@@ -272,7 +287,10 @@
 
       this.at(TIMES.fadeOut - t0, () => {
         this.cameras.main.fadeOut(2000, 0, 0, 0);
-        this.cameras.main.once("camerafadeoutcomplete", () => showEnd());   // in index.html
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+          if (window.PLAY_ALL) this.scene.start("taxi");   // "Play all": on to scene 4
+          else showEnd();                                   // in index.html
+        });
       });
     }
 
