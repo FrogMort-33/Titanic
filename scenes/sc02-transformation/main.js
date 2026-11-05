@@ -8,6 +8,8 @@
 //        music starts.
 //    5   CUT to the white panel, close up. Callum (the stick man) pops in.
 //   11   His speech "Draw me as I am, please" writes itself in.
+//   12.5 A toast pops up: the suspicious dog thinking "Draw me like one
+//        of your French girls" (see toast.js).
 //   14   The camera pulls out, and "So, without further ado, let's
 //        transform Callum..." writes itself in on the right.
 //   21   CUT to the watercolour panel (bottom of IMG-004). Callum stands
@@ -22,6 +24,8 @@
 //   45   POP! Each head and name pops in, one at a time, each pop a
 //        little quicker (and higher) than the one before.
 //   51   Star Wars crawl: "Now onto our grandest adventure!"
+//   54   The van from the opening jogs back across, right to left,
+//        and the 8-bit Valkyries come back (a "reprise").
 //   64   Fade out; the end of scene 2.
 //
 //  Change the numbers in TIMES to re-time the whole scene.
@@ -35,6 +39,7 @@
   const TIMES = {
     stickAppears: 5,
     speech: 11,
+    dogToast: 12.5,
     pullOut: 14,
     cutToMagic: 21,
     spinStarts: 23,
@@ -43,6 +48,7 @@
     spudText: 39,
     pops: 45,
     crawl: 51,
+    vanReturns: 54,     // about when the crawl is a third of the way up
     fadeOut: 64,
   };
 
@@ -76,6 +82,7 @@
       pic("final", "final.jpg");
     pic("spuds_blank", "spuds_blank.jpg");
     pic("spud_text", "spud_text.png");
+    pic("bus", "bus.png");                         // the van, copied from the opening
     for (const p of L.people) {                    // a head and a name for each person
       pic("head_" + p.name, "head_" + p.name + ".png");
       pic("name_" + p.name, "name_" + p.name + ".png");
@@ -140,6 +147,9 @@
       const speech = this.addSprite("speech", L.speech);
       this.writeIn(speech, 0);
       this.at(TIMES.speech - t0, () => this.writeIn(speech, 2000));
+
+      // ...and the suspicious dog has thoughts about that (toast.js).
+      this.at(TIMES.dogToast - t0, () => showDogToast());
 
       // Pull out to show the whole picture, then the announcement writes in.
       const announce = this.addSprite("announce", L.announce);
@@ -262,13 +272,52 @@
         startEndCrawl();                                 // in index.html
       });
 
+      // The van comes back the other way, to the Valkyries.
+      this.at(TIMES.vanReturns - t0, () => {
+        GalleryMusic.fadeOut(1);
+        OpeningMusic.start(TIMES.fadeOut - TIMES.vanReturns + 3);   // music.js of the opening
+        this.vanReturns();
+      });
+
       this.at(TIMES.fadeOut - t0, () => {
         GalleryMusic.fadeOut(2.5);
+        OpeningMusic.fadeOut(2.5);
         this.cameras.main.fadeOut(2500, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => {
           stopEndCrawl();                                // in index.html
           showEnd();                                     // in index.html
         });
+      });
+    }
+
+    // The van from the opening, jogging from right to left along the
+    // bottom of the screen. setFlipX(true) mirrors the picture so it
+    // faces the way it's going. setDepth(11) keeps it in front of the
+    // dark sheet, so it's bright while the page behind is dimmed.
+    vanReturns() {
+      const van = this.add.image(W + 250, 885, "bus").setOrigin(0.5, 1)
+        .setScale(0.55).setFlipX(true).setDepth(11);
+
+      // Jogging: bounce up and down and rock slightly, forever
+      this.tweens.add({
+        targets: van, y: van.y - 6, angle: { from: -1.5, to: 1.5 },
+        duration: 140, yoyo: true, repeat: -1,
+      });
+
+      // Across the screen in 7 seconds, starting slowly
+      this.tweens.add({ targets: van, x: -250, duration: 7000, ease: "Sine.easeIn" });
+
+      // Dust puffs: this time BEHIND means to the right of the van
+      this.time.addEvent({
+        delay: 120, repeat: 55,
+        callback: () => {
+          const puff = this.add.circle(van.x + 150, van.y - 10, 10 + Math.random() * 12, 0xd8cfa0)
+            .setAlpha(0.8).setDepth(11);
+          this.tweens.add({
+            targets: puff, x: puff.x + 60, y: puff.y - 30, scale: 2.2, alpha: 0, duration: 700,
+            onComplete: () => puff.destroy(),
+          });
+        },
       });
     }
 

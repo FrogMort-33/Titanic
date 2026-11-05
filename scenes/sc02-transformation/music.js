@@ -168,6 +168,27 @@ const GalleryMusic = (() => {
       }
     },
 
+    // "Hmm?" - the suspicious dog's sound: a note that slides down,
+    // then slides up at the end like a question. Triangle wave = soft.
+    suspicious() {
+      wake();
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(330, t);
+      osc.frequency.linearRampToValueAtTime(220, t + 0.35);   // "hmmm..."
+      osc.frequency.linearRampToValueAtTime(220, t + 0.5);
+      osc.frequency.linearRampToValueAtTime(400, t + 0.8);    // "...?"
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.35, t + 0.05);
+      gain.gain.setValueAtTime(0.35, t + 0.7);
+      gain.gain.linearRampToValueAtTime(0, t + 0.85);
+      osc.connect(gain).connect(fx);
+      osc.start(t);
+      osc.stop(t + 0.9);
+    },
+
     // POP! A quick "bloop" that slides upwards. 'number' 0, 1, 2 ...
     // makes each pop a little higher than the one before.
     pop(number = 0) {

@@ -27,6 +27,10 @@ Makes, in ../assets/:
   magic_blank.jpg  the lower watercolour panel with the dashed outline rubbed out
   outline.png      the dashed potato outline on its own
   final.jpg        top half of IMG-005: the potato and its top text
+  spuds_blank.jpg  bottom half of IMG-005 with text, heads and names rubbed out
+  spud_text.png, head_<name>.png, name_<name>.png   the bits that pop back in
+  bus.png          the van, copied from the opening's assets
+  (dog.jpg, the suspicious dog, was added by hand from Enda's upload)
 
 And layout.js (next to index.html), which tells main.js where each
 sprite sits on its background, so everything lines up exactly.
@@ -269,6 +273,12 @@ for h in holes:
         x0, y0, x1, y1, alpha = h
         cover[y0:y1, x0:x1] = np.maximum(cover[y0:y1, x0:x1], alpha)
 save_jpg(rub_out(spuds, cover, [h[:4] for h in holes], soft_edge=4), "spuds_blank.jpg")
+
+
+# ---- the van: the same cut-out as the opening's, just copied over -----
+import shutil
+shutil.copy(SCENE.parent / "sc01-opening" / "assets" / "bus.png", OUT / "bus.png")
+print("bus.png (copied from the opening)")
 
 
 # ---- write layout.js ---------------------------------------------------
