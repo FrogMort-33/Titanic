@@ -16,6 +16,16 @@
 //    VanSounds.sting()          a cheeky "ta-da" for FIVE MINUTES LATER
 //    VanSounds.forecast(secs)   our own jolly "weather forecast" tune
 //
+//   HORROR (Enda's idea: driving in France is SCARY)
+//    VanSounds.horror(secs)     our own spooky 8-bit organ tune
+//    VanSounds.horrorOff(s)     fade it away
+//    VanSounds.drone(secs)      a low, creepy hum (two notes that clash)
+//    VanSounds.heartbeat(secs)  lub-dub... lub-dub... getting FASTER
+//    VanSounds.thunder()        a crack of thunder and a long rumble
+//    VanSounds.scream()         a shriek
+//    VanSounds.creak()          a creaky door
+//    VanSounds.theremin(secs)   the wobbly "ooo-eee-ooo" of an old horror film
+//
 //  (Called "VanSounds" so it can share a page with the other episodes'.)
 // =====================================================================
 
@@ -23,6 +33,7 @@ const VanSounds = (() => {
   let ctx = null;          // the audio engine (shared with the other episodes)
   let out = null;          // volume knob for this episode
   let engineVol = null;    // volume knob for the engine
+  let horrorVol = null;    // volume knob for the spooky tune
 
   function wake() {
     // One shared audio engine for the whole page (iPad only lets a tap
@@ -188,6 +199,155 @@ const VanSounds = (() => {
       [["C5", 0, 0.1], ["E5", 0.1, 0.1], ["G5", 0.2, 0.1], ["C6", 0.32, 0.12], ["-", 0, 0], ["G5", 0.5, 0.1], ["C6", 0.62, 0.5]]
         .forEach(([n, when, length]) => { if (n !== "-") beep(HZ[n], when, length, "square", 0.07); });
       beep(HZ["C3"], 0.62, 0.5, "triangle", 0.3);
+    },
+
+    // ================= HORROR =================
+
+    // Our own spooky tune, in a minor key, on a wheezy 8-bit "organ"
+    // (two square waves slightly out of tune with each other = wobbly)
+    horror(seconds = 8) {
+      wake();
+      if (horrorVol) horrorVol.disconnect();
+      horrorVol = ctx.createGain(); horrorVol.gain.value = 0.9; horrorVol.connect(out);
+      const BEAT = 0.32;
+      const TUNE = [["D5", 1], ["F5", 1], ["A5", 1], ["G#5", 3], ["G5", 1], ["F5", 1], ["E5", 1], ["C#5", 3],
+                    ["D5", 1], ["A4", 1], ["Bb4", 1], ["G4", 2], ["F4", 1], ["E4", 1], ["D4", 4]];
+      const BASS = ["D3", "D3", "Bb2", "Bb2", "G2", "G2", "A2", "A2"];
+      let t = 0.05, i = 0;
+      while (t < seconds) {
+        const [n, beats] = TUNE[i % TUNE.length];
+        const len = beats * BEAT * 0.95;
+        organ(HZ[n], t, len);
+        t += beats * BEAT; i++;
+      }
+      for (let tb = 0.05, b = 0; tb < seconds; tb += 2 * BEAT, b++) {
+        const n = HZ[BASS[b % BASS.length]];
+        [0, 1].forEach((k) => {                    // "doom... doom"
+          const tt = ctx.currentTime + tb + k * BEAT;
+          const o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = n;
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.25, tt); g.gain.exponentialRampToValueAtTime(0.001, tt + BEAT * 0.9);
+          o.connect(g).connect(horrorVol); o.start(tt); o.stop(tt + BEAT);
+        });
+      }
+      function organ(freq, when, len) {
+        const tt = ctx.currentTime + when;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, tt);
+        g.gain.linearRampToValueAtTime(0.035, tt + 0.03);
+        g.gain.setValueAtTime(0.035, tt + len * 0.8);
+        g.gain.linearRampToValueAtTime(0, tt + len);
+        g.connect(horrorVol);
+        for (const detune of [-8, 8]) {             // two, slightly apart
+          const o = ctx.createOscillator(); o.type = "square";
+          o.frequency.value = freq; o.detune.value = detune;
+          o.connect(g); o.start(tt); o.stop(tt + len + 0.02);
+        }
+      }
+    },
+    horrorOff(seconds = 1.5) {
+      if (!horrorVol) return;
+      horrorVol.gain.setValueAtTime(horrorVol.gain.value, ctx.currentTime);
+      horrorVol.gain.linearRampToValueAtTime(0, ctx.currentTime + seconds);
+    },
+
+    // Two low notes very close together "beat" against each other:
+    // a slow, sick wobble. Fades in, then out.
+    drone(seconds = 10) {
+      wake();
+      const t = ctx.currentTime;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.12, t + 2);
+      g.gain.setValueAtTime(0.12, t + seconds - 1);
+      g.gain.linearRampToValueAtTime(0, t + seconds);
+      const low = ctx.createBiquadFilter(); low.type = "lowpass"; low.frequency.value = 500;
+      low.connect(g).connect(out);
+      for (const f of [73.4, 77.8]) {               // D2 and a clashing D#2
+        const o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = f;
+        o.connect(low); o.start(t); o.stop(t + seconds + 0.05);
+      }
+    },
+
+    // A heart beating: two soft thumps (lub-dub), the gap shrinking
+    // as it goes, from 1 beat a second to about 3 a second
+    heartbeat(seconds = 10) {
+      wake();
+      const thump = (when, vol) => {
+        const tt = ctx.currentTime + when;
+        const o = ctx.createOscillator(); o.type = "sine";
+        o.frequency.setValueAtTime(70, tt); o.frequency.exponentialRampToValueAtTime(40, tt + 0.12);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(vol, tt); g.gain.exponentialRampToValueAtTime(0.001, tt + 0.15);
+        o.connect(g).connect(out); o.start(tt); o.stop(tt + 0.16);
+      };
+      for (let t = 0; t < seconds;) {
+        thump(t, 0.6); thump(t + 0.16, 0.45);
+        t += 1 - 0.65 * (t / seconds);              // faster and faster
+      }
+    },
+
+    // Thunder: a sharp crack of hiss, then a long low rumble
+    thunder() {
+      wake();
+      hiss(0, 0.35, "highpass", 1500, 0.5);
+      const r = hiss(0.05, 3.5, "lowpass", 220, 0.9);
+      r.f.frequency.linearRampToValueAtTime(90, r.t + 3.5);
+    },
+
+    // A shriek: a high note that slides up, shaking (vibrato)
+    scream() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "sawtooth";
+      o.frequency.setValueAtTime(700, t); o.frequency.linearRampToValueAtTime(1200, t + 0.25);
+      o.frequency.linearRampToValueAtTime(900, t + 1);
+      const shake = ctx.createOscillator(), d = ctx.createGain();
+      shake.frequency.value = 9; d.gain.value = 40;
+      shake.connect(d).connect(o.frequency);
+      const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1500; f.Q.value = 2;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.18, t + 0.05);
+      g.gain.setValueAtTime(0.18, t + 0.7); g.gain.linearRampToValueAtTime(0, t + 1);
+      o.connect(f).connect(g).connect(out);
+      o.start(t); shake.start(t); o.stop(t + 1.05); shake.stop(t + 1.05);
+    },
+
+    // A creaky door: a low buzzy note dragging slowly up and down, in jerks
+    creak() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "sawtooth";
+      o.frequency.setValueAtTime(90, t);
+      for (let k = 1; k <= 8; k++) o.frequency.linearRampToValueAtTime(90 + Math.sin(k) * 40 + k * 8, t + k * 0.18);
+      const jerk = ctx.createOscillator(), d = ctx.createGain();   // the "rrrr" in the creak
+      jerk.frequency.value = 35; d.gain.value = 0.5;
+      const level = ctx.createGain(); level.gain.value = 0.5;
+      jerk.connect(d).connect(level.gain);
+      const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 900; f.Q.value = 4;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.5, t + 0.1);
+      g.gain.setValueAtTime(0.5, t + 1.3); g.gain.linearRampToValueAtTime(0, t + 1.5);
+      o.connect(level).connect(f).connect(g).connect(out);
+      o.start(t); jerk.start(t); o.stop(t + 1.55); jerk.stop(t + 1.55);
+    },
+
+    // Theremin: a pure note gliding smoothly between pitches, wobbling
+    theremin(seconds = 8) {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "sine";
+      const NOTES = ["A4", "D5", "C5", "A4", "F4", "E4", "G#4", "A4"];
+      o.frequency.setValueAtTime(HZ["A4"], t);
+      NOTES.forEach((n, k) => o.frequency.exponentialRampToValueAtTime(HZ[n], t + (k + 1) * seconds / NOTES.length));
+      const wob = ctx.createOscillator(), d = ctx.createGain();
+      wob.frequency.value = 6; d.gain.value = 8;
+      wob.connect(d).connect(o.frequency);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.14, t + 0.8);
+      g.gain.setValueAtTime(0.14, t + seconds - 1); g.gain.linearRampToValueAtTime(0, t + seconds);
+      o.connect(g).connect(out);
+      o.start(t); wob.start(t); o.stop(t + seconds + 0.05); wob.stop(t + seconds + 0.05);
     },
 
     // Our own bouncy weather-forecast tune

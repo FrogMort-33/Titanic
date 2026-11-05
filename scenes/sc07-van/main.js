@@ -33,7 +33,12 @@
 //   41    "Hoo boy, these local drivers sure do have a bee in their bonnet!"
 //
 //   PANEL 5 - TODAY'S DRIVING FORECAST
-//   49.5  The whole forecast panel, with a jolly forecast tune.
+//   49.5  The whole forecast panel, with the spooky tune and thunder.
+//
+//  HORROR MUSIC (Enda's idea): a spooky organ tune under the opening
+//  words, a creepy hum and a speeding heartbeat in the countdown, a creaky
+//  door and thunder on "1", a theremin "ooo-eee-ooo" on "Here we go!" and
+//  FIVE MINUTES LATER, and a scream at the crash.
 //   56    Fade out. The end.
 //
 //  STORY RULE: the van travels LEFT to RIGHT (right to left is kept for
@@ -98,11 +103,14 @@
     }
 
     start() {
+      // HORROR: a spooky organ tune under the opening words
+      VanSounds.horror(TIMES.driver - TIMES.openText + 0.5);
+      this.at(TIMES.driver - 0.8, () => VanSounds.horrorOff(1));
       this.showWords();
       this.at(TIMES.driver, () => { this.cut(); this.showDriver(); });
       this.at(TIMES.vroomPanel, () => { this.cut(); this.showVroom(); });
       this.at(TIMES.bam, () => { this.cut(); this.showBam(); });
-      this.at(TIMES.black, () => this.cameras.main.fadeOut(1000, 0, 0, 0));
+      this.at(TIMES.black, () => { this.cameras.main.fadeOut(1000, 0, 0, 0); VanSounds.creak(); });
       this.at(TIMES.five, () => { this.cut(); this.showFive(); });
       this.at(TIMES.forecast - 1, () => this.cameras.main.fadeOut(900, 0, 0, 0));
       this.at(TIMES.forecast, () => { this.cut(); this.showForecast(); });
@@ -158,6 +166,9 @@
       const at = (time, fn) => this.at(time - t0, fn);
       this.cameras.main.setBackgroundColor(0x000000);
       VanSounds.engine(TIMES.bam - TIMES.driver + 1);
+      // HORROR: a creepy hum and a heart beating faster and faster
+      VanSounds.drone(TIMES.vroomPanel - TIMES.driver);
+      VanSounds.heartbeat(TIMES.one - TIMES.driver);
 
       const pic = this.placed("van_driver");
       const home = { x: pic.x, y: pic.y };
@@ -195,7 +206,8 @@
       at(TIMES.out2, zoomOut);
       at(TIMES.bigRev, () => { VanSounds.rev(2); this.cameras.main.shake(400, 0.006); });
       at(TIMES.one - 2, () => VanSounds.drumroll(2));        // hold...
-      at(TIMES.one, () => { count(1, true); VanSounds.rev(3); });
+      at(TIMES.one - 2.5, () => VanSounds.creak());          // a creaky door, somewhere...
+      at(TIMES.one, () => { count(1, true); VanSounds.rev(3); VanSounds.thunder(); });
 
       // The picture grows and grows, and fades away
       at(TIMES.expand, () => {
@@ -217,7 +229,7 @@
       const van = this.placed("van_van");
       const say = this.placed("van_herewego");
       this.rollDown(say, 0);
-      at(TIMES.hereWeGo, () => this.rollDown(say, 1200));
+      at(TIMES.hereWeGo, () => { this.rollDown(say, 1200); VanSounds.theremin(3.5); });
 
       // VROOOOM: pops up as he revs, and the van shakes with it
       const vroom = this.middle(this.placed("van_vroom")).setScale(0);
@@ -242,6 +254,7 @@
       const t0 = TIMES.bam;
       const at = (time, fn) => this.at(time - t0, fn);
       VanSounds.crash();
+      VanSounds.scream();
       VanSounds.engineOff(1.2);
       this.cameras.main.flash(250, 255, 255, 255);
       this.cameras.main.shake(500, 0.02);
@@ -279,6 +292,7 @@
       this.cameras.main.setBackgroundColor(PAPER);
       const five = this.middle(this.placed("van_five")).setScale(0.2).setAngle(-12);
       VanSounds.sting();
+      VanSounds.theremin(TIMES.forecast - TIMES.five - 1.5);   // ooo-eee-ooo...
       this.tweens.add({ targets: five, scale: 1, angle: 0, duration: 600, ease: "Back.easeOut" });
 
       const words = this.placed("van_hooboy");
@@ -291,7 +305,10 @@
     // =====================================================================
     showForecast() {
       this.add.image(0, 0, "van_forecast").setOrigin(0);
-      VanSounds.forecast(TIMES.fadeOut - TIMES.forecast + 1);
+      // The forecast is... SCARY. The spooky tune again, with thunder.
+      VanSounds.horror(TIMES.fadeOut - TIMES.forecast + 2);
+      VanSounds.thunder();
+      this.at(TIMES.fadeOut - TIMES.forecast, () => VanSounds.horrorOff(2));
     }
   }
 
