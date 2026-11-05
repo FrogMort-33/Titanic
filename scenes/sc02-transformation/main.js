@@ -24,7 +24,7 @@
 //   45   POP! Each head and name pops in, one at a time, each pop a
 //        little quicker (and higher) than the one before.
 //   51   Star Wars crawl: "Now onto our grandest adventure!"
-//   54   The van from the opening jogs back across, right to left,
+//   54   The van from the opening jogs across again, left to right,
 //        and the 8-bit Valkyries come back (a "reprise").
 //   64   Fade out; the end of scene 2.
 //
@@ -290,13 +290,14 @@
       });
     }
 
-    // The van from the opening, jogging from right to left along the
-    // bottom of the screen. setFlipX(true) mirrors the picture so it
-    // faces the way it's going. setDepth(11) keeps it in front of the
-    // dark sheet, so it's bright while the page behind is dimmed.
+    // The van from the opening, jogging from LEFT to RIGHT along the
+    // bottom of the screen (the same way as in the opening).
+    // STORY RULE: right-to-left is kept for a comedy "retreat" later on.
+    // setDepth(11) keeps it in front of the dark sheet, so it's bright
+    // while the page behind is dimmed.
     vanReturns() {
-      const van = this.add.image(W + 250, 885, "bus").setOrigin(0.5, 1)
-        .setScale(0.55).setFlipX(true).setDepth(11);
+      const van = this.add.image(-250, 885, "bus").setOrigin(0.5, 1)
+        .setScale(0.55).setDepth(11);
 
       // Jogging: bounce up and down and rock slightly, forever
       this.tweens.add({
@@ -305,16 +306,16 @@
       });
 
       // Across the screen in 7 seconds, starting slowly
-      this.tweens.add({ targets: van, x: -250, duration: 7000, ease: "Sine.easeIn" });
+      this.tweens.add({ targets: van, x: W + 250, duration: 7000, ease: "Sine.easeIn" });
 
-      // Dust puffs: this time BEHIND means to the right of the van
+      // Dust puffs, behind the van (to its left)
       this.time.addEvent({
         delay: 120, repeat: 55,
         callback: () => {
-          const puff = this.add.circle(van.x + 150, van.y - 10, 10 + Math.random() * 12, 0xd8cfa0)
+          const puff = this.add.circle(van.x - 150, van.y - 10, 10 + Math.random() * 12, 0xd8cfa0)
             .setAlpha(0.8).setDepth(11);
           this.tweens.add({
-            targets: puff, x: puff.x + 60, y: puff.y - 30, scale: 2.2, alpha: 0, duration: 700,
+            targets: puff, x: puff.x - 60, y: puff.y - 30, scale: 2.2, alpha: 0, duration: 700,
             onComplete: () => puff.destroy(),
           });
         },

@@ -5,3 +5,10 @@
 - Offline / USB stick: copy a scene folder (e.g. `scenes/sc01-opening/`) and double-click its `index.html`. No internet needed.
 
 The full-size master photos (`originals/`) are deliberately **not** in this repo.
+
+## Story conventions
+
+Rules we keep across every scene, so the story feels consistent:
+
+- **The van travels LEFT to RIGHT** when it's going somewhere (the opening, and its return in scene 2).
+- **RIGHT to LEFT is reserved** for a comedy "retreat" later in the story. Don't use it for anything else.

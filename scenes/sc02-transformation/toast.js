@@ -6,7 +6,7 @@
 //  like a phone notification) slides up in the bottom-right corner with
 //  the side-eye dog. Small thought bubbles float up from it, getting
 //  bigger, and then a big bubble says:
-//        "Draw me like one of your French girls"
+//        "Draw me like one of your French girls !! ?"
 //  After a few seconds it all slides away again.
 //
 //  It's plain HTML + CSS laid over the picture (like the title crawl),
@@ -69,7 +69,7 @@ const TOAST_HTML = `
   <div class="puff p1"></div>
   <div class="puff p2"></div>
   <div class="puff p3"></div>
-  <div class="big">Draw me like one of your French girls</div>
+  <div class="big">Draw me like one of your French girls !! ?</div>
 `;
 
 // ---- Show it once ------------------------------------------------------
