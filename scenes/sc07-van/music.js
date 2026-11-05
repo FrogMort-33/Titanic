@@ -16,6 +16,15 @@
 //    VanSounds.sting()          a cheeky "ta-da" for FIVE MINUTES LATER
 //    VanSounds.forecast(secs)   our own jolly "weather forecast" tune
 //
+//   THE DRIVING FORECAST
+//    VanSounds.tickUp(i)        one tick of the dial (i = 0, 1, 2... higher each time)
+//    VanSounds.alarm()          the dial hits "French": a wailing alarm
+//    VanSounds.grumble()        an angry "grrr" and a horn
+//    VanSounds.whistleUp()      a slide whistle going UP
+//    VanSounds.valkyries(bars)  our 8-bit Ride of the Valkyries (as in episode 1)
+//    VanSounds.bonk()           one van bumping another
+//    VanSounds.fire(secs)       crackling flames
+//
 //   HORROR (Enda's idea: driving in France is SCARY)
 //    VanSounds.horror(secs)     our own spooky 8-bit organ tune
 //    VanSounds.horrorOff(s)     fade it away
@@ -199,6 +208,94 @@ const VanSounds = (() => {
       [["C5", 0, 0.1], ["E5", 0.1, 0.1], ["G5", 0.2, 0.1], ["C6", 0.32, 0.12], ["-", 0, 0], ["G5", 0.5, 0.1], ["C6", 0.62, 0.5]]
         .forEach(([n, when, length]) => { if (n !== "-") beep(HZ[n], when, length, "square", 0.07); });
       beep(HZ["C3"], 0.62, 0.5, "triangle", 0.3);
+    },
+
+    // ================= THE DRIVING FORECAST =================
+
+    tickUp(i = 0) {
+      wake();
+      hiss(0, 0.025, "highpass", 3000, 0.3);
+      beep(300 * Math.pow(1.09, i), 0, 0.05, "square", 0.06);
+    },
+
+    // A siren going up and down three times
+    alarm() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "square";
+      o.frequency.setValueAtTime(600, t);
+      for (let k = 0; k < 3; k++) {
+        o.frequency.linearRampToValueAtTime(1200, t + k * 0.5 + 0.25);
+        o.frequency.linearRampToValueAtTime(600, t + k * 0.5 + 0.5);
+      }
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.06, t); g.gain.setValueAtTime(0.06, t + 1.4); g.gain.linearRampToValueAtTime(0, t + 1.5);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 1.55);
+    },
+
+    // Grrr (a low, rough, wobbling buzz) then HONK HONK
+    grumble() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = 85;
+      const wob = ctx.createOscillator(), d = ctx.createGain();
+      wob.frequency.value = 25; d.gain.value = 20;
+      wob.connect(d).connect(o.frequency);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.15, t + 0.1);
+      g.gain.setValueAtTime(0.15, t + 0.9); g.gain.linearRampToValueAtTime(0, t + 1.1);
+      o.connect(g).connect(out); o.start(t); wob.start(t); o.stop(t + 1.15); wob.stop(t + 1.15);
+      for (const when of [1.3, 1.65]) { beep(349, when, 0.25, "square", 0.08); beep(440, when, 0.25, "square", 0.06); }
+    },
+
+    // A slide whistle: a pure note sliding UP
+    whistleUp() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "sine";
+      o.frequency.setValueAtTime(400, t); o.frequency.exponentialRampToValueAtTime(1800, t + 0.5);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.2, t + 0.05);
+      g.gain.setValueAtTime(0.2, t + 0.45); g.gain.linearRampToValueAtTime(0, t + 0.55);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.6);
+    },
+
+    // Ride of the Valkyries (Wagner, 1870: long out of copyright), the
+    // same 8-bit tune as episode 1's opening. Each bar: da-da-da DAAA DAAA.
+    valkyries(bars = 4) {
+      wake();
+      const BEAT = 0.6;
+      const RHYTHM = [0.5, 1 / 6, 1 / 3, 1, 1];
+      const TUNE = [["B4", "F#4", "B4", "D5", "B4"], ["D5", "B4", "D5", "F#5", "D5"],
+                    ["F#5", "D5", "F#5", "A5", "A4"], ["D5", "A4", "D5", "F#5", "F#5"]];
+      let t = 0.05;
+      for (let b = 0; b < bars; b++) {
+        const [n1, n2, n3, n4, n5] = TUNE[b % TUNE.length];
+        let x = t;
+        [n1, n2, n3].forEach((n, k) => { beep(HZ[n], x, RHYTHM[k] * BEAT * 0.85, "square", 0.1); x += RHYTHM[k] * BEAT; });
+        if (n4 === n5) beep(HZ[n4], x, 2 * BEAT * 0.9, "square", 0.1);
+        else { beep(HZ[n4], x, BEAT * 0.85, "square", 0.1); beep(HZ[n5], x + BEAT, BEAT * 0.85, "square", 0.1); }
+        beep(HZ["B2"], t, 3 * BEAT * 0.9, "triangle", 0.2);       // a low note under each bar
+        t += 3 * BEAT;
+      }
+    },
+
+    bonk() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "square";
+      o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.15);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.22);
+      hiss(0, 0.1, "lowpass", 1500, 0.3);
+    },
+
+    // Fire: lots of tiny random pops (crackle) over a soft roar
+    fire(seconds = 4) {
+      wake();
+      const roar = hiss(0, seconds, "lowpass", 400, 0.15);
+      for (let t = 0; t < seconds; t += 0.03 + Math.random() * 0.12) hiss(t, 0.015, "highpass", 2500, 0.1 + Math.random() * 0.25);
     },
 
     // ================= HORROR =================

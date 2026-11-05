@@ -26,7 +26,11 @@ Makes, in ../assets/:
   van_crashed.png       "...and promptly crashed into the barrier of the car park!"
   van_five.png          the "FIVE MINUTES LATER" panel
   van_hooboy.png        "Hoo boy, these local drivers sure do have a bee in their bonnet!"
-  van_forecast.jpg      "Today's driving forecast"
+  van_forecast.jpg      "Today's driving forecast" (as drawn)
+  fc_blank.jpg          the forecast with only its title
+  fc_dial.png (no pointer), fc_face.png, fc_brows.png, fc_wheel.png,
+  fc_cab.png (no arm), fc_arm.png, fc_tyre.png, fc_blue.png, fc_pink.png,
+  fc_burnt.png          each drawing on the forecast, to animate
 
 And layout.js (window.LAYOUT7): where everything goes, in screen pixels.
 
@@ -203,7 +207,79 @@ layout["van_hooboy"] = {"x": hoo.x, "y": hoo.y}
 #  PANEL 5: Today's driving forecast (IMG-029)
 # =====================================================================
 forecast = Picture("14_2.jpg", 270, (88, 84, 958, 706), W - 20, H - 10)
-forecast.save_on_paper("van_forecast")
+forecast.save_on_paper("van_forecast")          # the whole panel, as drawn
+fc = forecast
+
+def outline_cut(pic, name, outline, box=None):
+    """A sprite cut along a hand-traced outline (everything inside it)."""
+    pts = [pic.pt(x, y) for x, y in outline]
+    a = polygon_mask(pic.img.size, pts, 1.2)
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    b = (max(min(xs) - 2, 0), max(min(ys) - 2, 0), min(max(xs) + 2, pic.img.width), min(max(ys) + 2, pic.img.height))
+    save_png(name, pic.img.crop(b), a[b[1]:b[3], b[0]:b[2]])
+    pic.place(name, b[0], b[1])
+    pic.hole = np.maximum(pic.hole, a)
+
+# Each drawing on the forecast is cut out on its own, so main.js can
+# bring them in one by one and animate them.
+#
+# The dial: its little pointer is rubbed out (main.js draws a new needle
+# that can swing round). The black hub stays.
+db = fc.pbox((372, 206, 694, 518))
+dial_a = np.zeros_like(fc.ink)
+dial_a[db[1]:db[3], db[0]:db[2]] = fill_inside(fc.ink, db)
+nub = fc.pbox((572, 360, 598, 384))
+nub_hole = np.zeros(fc.ink.shape, np.float32)
+nub_hole[nub[1]:nub[3], nub[0]:nub[2]] = fc.ink[nub[1]:nub[3], nub[0]:nub[2]]
+nub_hole = grow(nub_hole, 7) > 10
+dial_rgb = fill_holes(fc.rgb, (~nub_hole & (fc.ink < 25)).astype(np.float32))
+dial_rgb = np.where(nub_hole[..., None], dial_rgb, fc.rgb)
+save_png("fc_dial", Image.fromarray(np.clip(dial_rgb, 0, 255).astype(np.uint8)).crop(db), dial_a[db[1]:db[3], db[0]:db[2]])
+fc.place("fc_dial", db[0], db[1])
+fc.hole = np.maximum(fc.hole, dial_a)
+hx, hy = fc.pt(534, 378)
+layout["fc_hub"] = [hx + fc.x, hy + fc.y]                        # the middle of the hub
+layout["fc_hub_r"] = fc.pt(534 + 38, 378)[0] - hx                 # its radius
+layout["fc_needle"] = fc.pt(534 + 125, 378)[0] - hx               # how long the needle is
+
+# The angry driver (upper right): face, eyebrows, steering wheel
+fc.words("fc_brows", (786, 176, 873, 195))                       # (just the eyebrows' ink)
+fc.words("fc_face", (744, 150, 916, 244))                        # (the rest of the face's ink...
+face = Image.open(OUT / "fc_face.png")                            #  ...without the eyebrows)
+fa = np.asarray(face.getchannel("A"), np.float32).copy()
+fb, bb2 = fc.pbox((744, 150, 916, 244)), fc.pbox((786, 176, 873, 195))
+fa[bb2[1] - fb[1]:bb2[3] - fb[1], bb2[0] - fb[0]:bb2[2] - fb[0]] = 0
+face.putalpha(Image.fromarray(fa.astype(np.uint8)))
+face.save(OUT / "fc_face.png")
+fc.solid("fc_wheel", (770, 246, 877, 357), [(770, 246), (877, 246), (877, 357), (770, 357)])
+
+# The lorry's cab (left): the hand doing the "salute" comes off on its own
+ARM = [(203, 320), (213, 321), (258, 276), (276, 268), (276, 226), (237, 226), (237, 262), (198, 304)]
+outline_cut(fc, "fc_arm", ARM)
+CAB = [(88, 172), (321, 174), (340, 470), (88, 473)]
+cab_a = polygon_mask(fc.img.size, [fc.pt(x, y) for x, y in CAB], 1.2)
+cb = fc.pbox((86, 170, 342, 475))
+# where the arm was, inside the window: paint it plain white, like the window
+arm_m = polygon_mask(fc.img.size, [fc.pt(x, y) for x, y in ARM], 0) > 0
+wb = fc.pbox((110, 215, 200, 230))                                # a plain bit of the window
+cab_rgb = fc.rgb.copy()
+cab_rgb[arm_m] = np.median(fc.rgb[wb[1]:wb[3], wb[0]:wb[2]].reshape(-1, 3), axis=0)
+save_png("fc_cab", Image.fromarray(cab_rgb.astype(np.uint8)).crop(cb), cab_a[cb[1]:cb[3], cb[0]:cb[2]])
+fc.place("fc_cab", cb[0], cb[1])
+fc.hole = np.maximum(fc.hole, cab_a)
+# (the tyre: a rough circle round it, so the cab's bottom line doesn't come too)
+TYRE = [(200 + 54 * np.cos(a), 518 + 50 * np.sin(a)) for a in np.linspace(0, 2 * np.pi, 24, endpoint=False)]
+fc.solid("fc_tyre", (144, 466, 256, 570), TYRE)
+sx, sy = fc.pt(207, 316)
+layout["fc_shoulder"] = [sx + fc.x, sy + fc.y]                    # the arm swings round here
+
+# The two little vans along the bottom, and the burnt-out blue one
+fc.solid("fc_blue", (88, 582, 255, 691), [(88, 582), (255, 582), (255, 691), (88, 691)])
+fc.solid("fc_pink", (297, 537, 456, 653), [(297, 537), (456, 537), (456, 653), (297, 653)])
+fc.solid("fc_burnt", (742, 432, 922, 645), [(742, 432), (922, 432), (922, 645), (742, 645)])
+
+# The empty forecast: only the title is left
+fc.blank("fc_blank")
 
 
 (SCENE / "layout.js").write_text(
