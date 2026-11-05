@@ -58,21 +58,20 @@
       tune.hidden = true;
       document.getElementById("tada").hidden = true;
       document.getElementById("note").hidden = true;
-      Music.start(23);
       window.startShow();
     });
 
     // Music only: play (or stop) just the tune, to check it quickly.
     const tune = document.getElementById("tune");
     tune.addEventListener("click", () => {
-      if (tune.dataset.on) { Music.stop(); tune.dataset.on = ""; tune.textContent = "\u{1F3B5} Music only"; }
-      else { Music.start(30); tune.dataset.on = "1"; tune.textContent = "■ Stop music"; }
+      if (tune.dataset.on) { GalleryMusic.stop(); tune.dataset.on = ""; tune.textContent = "\u{1F3B5} Music only"; }
+      else { GalleryMusic.start(30); tune.dataset.on = "1"; tune.textContent = "■ Stop music"; }
     });
 
     // TA-DA only: the drum-roll then the fanfare, to hear them on their own.
     document.getElementById("tada").addEventListener("click", () => {
-      Music.roll(3);
-      setTimeout(() => Music.tada(), 3000);
+      GalleryMusic.roll(3);
+      setTimeout(() => GalleryMusic.tada(), 3000);
     });
 
     // Replay: simplest is to reload the page and start again.

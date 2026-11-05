@@ -15,11 +15,15 @@ HERE = Path(__file__).resolve().parent
 MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
         ".mp3": "audio/mpeg", ".ogg": "audio/ogg", ".wav": "audio/wav"}
 
-lines = ["// Made by make_offline.py - do not edit by hand.", "window.ASSETS = {"]
+# Object.assign ADDS these pictures to any already loaded, so several
+# scenes' assets.js files can share one page ("Play all") without one
+# wiping out the other.
+lines = ["// Made by make_offline.py - do not edit by hand.",
+         "window.ASSETS = Object.assign(window.ASSETS || {}, {"]
 for f in sorted((HERE / "assets").iterdir()):
     if f.suffix.lower() in MIME:
         text = base64.b64encode(f.read_bytes()).decode("ascii")
         lines.append(f'  "{f.stem}": "data:{MIME[f.suffix.lower()]};base64,{text}",')
         print("packed", f.name)
-lines.append("};")
+lines.append("});")
 (HERE / "assets.js").write_text("\n".join(lines) + "\n")

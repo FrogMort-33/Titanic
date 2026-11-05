@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- The front page of the website: just a list of the scenes. -->
+<!-- The front page (main menu): play everything, or pick one scene. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -9,15 +9,22 @@
     body { margin: 0; min-height: 100vh; background: #111; color: #ffe81f;
            font-family: "Arial Black", Arial, sans-serif; text-align: center; padding: 40px 16px; box-sizing: border-box; }
     h1 { font-size: 8vmin; margin: 0 0 8px; }
+    h2 { font-size: 18px; color: #bbb; margin: 32px 0 0; }
     p  { color: #bbb; font-family: Arial, sans-serif; }
     a.scene { display: block; max-width: 420px; margin: 16px auto; padding: 18px; background: #ffe81f;
               color: #000; text-decoration: none; border: 4px solid #000; border-radius: 8px; font-size: 22px; }
+    a.all { font-size: 28px; background: #fff; }
   </style>
 </head>
 <body>
   <h1>THE TITANIC CLUB</h1>
   <p>Time for Dinner Productions presents... an animated retelling</p>
-  <!-- Add one line here for every new scene -->
+
+  <!-- Every scene, one after another -->
+  <a class="scene all" href="play-all.html">&#9654; Play all</a>
+
+  <!-- Or one scene at a time. Add one line here for every new scene. -->
+  <h2>SCENES</h2>
   <a class="scene" href="scenes/sc01-opening/index.html">Scene 1 &middot; The Opening</a>
   <a class="scene" href="scenes/sc02-transformation/index.html">Scene 2 &middot; The Transformation</a>
   <p>Sound on. On iPad, check the silent switch.</p>

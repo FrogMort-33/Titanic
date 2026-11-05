@@ -21,7 +21,8 @@
 //  To make it faster or slower, change BEAT.
 // =====================================================================
 
-const Music = (() => {
+// (Called GalleryMusic, so it can share a page with other scenes' music.)
+const GalleryMusic = (() => {
   let ctx = null;        // the audio engine (iPad: must be started by a tap)
   let master = null;     // volume knob for the gallery music
   let fx = null;         // separate volume knob for the roll and the TA-DA
@@ -99,7 +100,11 @@ const Music = (() => {
 
   // ---- Start the audio engine (only allowed after a tap on iPad) ------
   function wake() {
-    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+    // One shared audio engine for the whole page. When scenes play one
+    // after another ("Play all"), the engine started by the Play tap is
+    // reused, because iPad only lets a tap switch sound on.
+    ctx = ctx || (window.AUDIO_ENGINE = window.AUDIO_ENGINE ||
+                  new (window.AudioContext || window.webkitAudioContext)());
     ctx.resume();
     if (!fx) { fx = ctx.createGain(); fx.gain.value = 0.8; fx.connect(ctx.destination); }
   }

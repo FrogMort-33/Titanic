@@ -1,0 +1,117 @@
+<!doctype html>
+<!--
+  play-all.html  -  every scene, one straight after the other.
+
+  HOW IT WORKS
+  Each scene's files are loaded from its own folder (nothing is copied).
+  The empty list PLAY_ALL below tells each scene's main.js: "don't start
+  on your own, just add yourself to this list". At the bottom, Phaser is
+  started once with the whole list. When a scene finishes, it starts the
+  next one by name instead of showing its Replay button.
+
+  TO ADD A NEW SCENE: add its scripts in the marked place below, and make
+  the scene before it start it by name at its end (see the opening's
+  "camerafadeoutcomplete" in scenes/sc01-opening/main.js).
+
+  The opening's title crawl is plain HTML, so its words and style are
+  copied here from scenes/sc01-opening/index.html. If you change the
+  crawl there, change it here too.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Titanic Club</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
+                 font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif; }
+    #stage { position: relative; width: 100%; height: 100%; }
+
+    /* ---- The opening's Star Wars crawl (copied from the opening) ---- */
+    #crawl { position: absolute; inset: 0; perspective: 360px; overflow: hidden;
+             pointer-events: none; z-index: 2; }
+    #crawl .tilt { position: absolute; left: 12%; right: 12%; top: 0; bottom: 0;
+                   transform-origin: 50% 100%; transform: rotateX(26deg); }
+    #crawl .text { position: absolute; top: 100%; width: 100%; text-align: center;
+                   color: #ffe81f; text-shadow: 0 0 12px rgba(0,0,0,.8); }
+    #crawl h1 { font-size: 9vmin; line-height: 1.05; margin: 0 0 6vmin; letter-spacing: .04em; }
+    #crawl p  { font-size: 6vmin; margin: 0; font-style: italic; }
+    #crawl.go .text { animation: crawl 13s linear forwards; }
+    @keyframes crawl { to { top: -140%; } }
+    #crawl.gone { opacity: 0; transition: opacity .3s; }
+
+    /* ---- Buttons ---- */
+    .button { font: inherit; font-size: 28px; padding: 18px 40px; cursor: pointer; text-decoration: none;
+              background: #ffe81f; color: #000; border: 4px solid #000; border-radius: 6px; }
+    #play { position: absolute; z-index: 3; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+    #play[hidden] { display: none; }
+    .note { position: absolute; z-index: 3; left: 0; right: 0; bottom: 24px; text-align: center;
+            color: #bbb; font-family: Arial, sans-serif; font-size: 14px; }
+    #end { position: absolute; z-index: 3; inset: 0; display: flex; gap: 20px;
+           align-items: center; justify-content: center; flex-wrap: wrap; }
+    #end[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div id="crawl"><div class="tilt"><div class="text">
+      <h1>TIME FOR DINNER<br>PRODUCTIONS</h1>
+      <p>Presents</p>
+    </div></div></div>
+
+    <button class="button" id="play">&#9654; Play all</button>
+    <div class="note" id="note">Sound on (on iPad, check the silent switch)</div>
+
+    <div id="end" hidden>
+      <a class="button" href="index.html">&#9776; Menu</a>
+      <button class="button" id="replay">&#8635; Play all again</button>
+    </div>
+  </div>
+
+  <!-- 1. Tell the scenes we're playing them all (an empty list they add to) -->
+  <script>window.PLAY_ALL = [];</script>
+
+  <!-- 2. Phaser, once (both scenes carry the same copy) -->
+  <script src="scenes/sc01-opening/lib/phaser.min.js"></script>
+
+  <!-- 3. Each scene's files, in the order they play  =================== -->
+  <script src="scenes/sc01-opening/assets.js"></script>
+  <script src="scenes/sc01-opening/music.js"></script>
+  <script src="scenes/sc01-opening/main.js"></script>
+
+  <script src="scenes/sc02-transformation/assets.js"></script>
+  <script src="scenes/sc02-transformation/layout.js"></script>
+  <script src="scenes/sc02-transformation/music.js"></script>
+  <script src="scenes/sc02-transformation/main.js"></script>
+  <!-- (add the next scene's scripts here) ================================ -->
+
+  <script>
+    // Called by the scenes at the right moments.
+    const crawl = document.getElementById("crawl");
+    function startCrawl() { crawl.classList.add("go"); }
+    function stopCrawl()  { crawl.classList.add("gone"); }
+    function showEnd()    { document.getElementById("end").hidden = false; }
+
+    // 4. Start Phaser with every scene in the list. Phaser runs the first
+    //    one (the opening); the others wait until they're started by name.
+    new Phaser.Game({
+      type: Phaser.AUTO,
+      width: 1280,
+      height: 900,
+      parent: "stage",
+      backgroundColor: "#000000",
+      scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+      scene: window.PLAY_ALL,
+    });
+
+    // Play: the tap switches the sound on (iPad rule), then the show begins.
+    document.getElementById("play").addEventListener("click", (e) => {
+      e.target.hidden = true;
+      document.getElementById("note").hidden = true;
+      window.startShow();               // set by the opening when it's ready
+    });
+
+    document.getElementById("replay").addEventListener("click", () => location.reload());
+  </script>
+</body>
+</html>

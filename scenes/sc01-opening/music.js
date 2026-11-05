@@ -19,7 +19,8 @@
 //  To make it faster or slower, change BEAT.
 // =====================================================================
 
-const Music = (() => {
+// (Called OpeningMusic, so it can share a page with other scenes' music.)
+const OpeningMusic = (() => {
   let ctx = null;        // the audio engine (iPad: must be started by a tap)
   let master = null;     // one volume knob for everything
 
@@ -82,7 +83,11 @@ const Music = (() => {
   }
 
   function setUp() {
-    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+    // One shared audio engine for the whole page. When scenes play one
+    // after another ("Play all"), the engine started by the Play tap is
+    // reused, because iPad only lets a tap switch sound on.
+    ctx = ctx || (window.AUDIO_ENGINE = window.AUDIO_ENGINE ||
+                  new (window.AudioContext || window.webkitAudioContext)());
     ctx.resume();
     if (master) master.disconnect();                 // silence anything still playing
     master = ctx.createGain();

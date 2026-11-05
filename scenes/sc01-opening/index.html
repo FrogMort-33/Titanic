@@ -77,15 +77,14 @@
       e.target.hidden = true;
       tune.hidden = true;
       document.getElementById("note").hidden = true;
-      Music.start(42);
       window.startShow();
     });
 
     // Music only: play (or stop) just the tune, to check it quickly.
     const tune = document.getElementById("tune");
     tune.addEventListener("click", () => {
-      if (tune.dataset.on) { Music.stop(); tune.dataset.on = ""; tune.textContent = "\u{1F3B5} Music only"; }
-      else { Music.start(30); tune.dataset.on = "1"; tune.textContent = "\u25A0 Stop music"; }
+      if (tune.dataset.on) { OpeningMusic.stop(); tune.dataset.on = ""; tune.textContent = "\u{1F3B5} Music only"; }
+      else { OpeningMusic.start(30); tune.dataset.on = "1"; tune.textContent = "\u25A0 Stop music"; }
     });
 
     // Replay: simplest is to reload the page and start again.
