@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hello Van</title>
+  <style>
+    /* Page colours borrowed from the book */
+    body { margin: 0; background: #f6efc4; color: #1d1b14; font-family: "Comic Sans MS", system-ui, sans-serif; }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
+
+    /* ---- The HUD: plain HTML sitting above the Phaser picture ---- */
+    .hud { display: flex; align-items: center; gap: 12px; border: 3px solid #1d1b14; padding: 10px 14px; background: #fffceb; }
+    .meter { flex: 1; height: 22px; border: 2px solid #1d1b14; background: #fff; }
+    .meter div { height: 100%; width: 0; background: #d6608c; }   /* the coloured fill */
+
+    #stage { border: 3px solid #1d1b14; line-height: 0; }        /* Phaser puts its canvas in here */
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hud">
+      <strong>Minibus stress</strong>
+      <div class="meter"><div id="van-stress"></div></div>
+    </div>
+
+    <div id="stage"></div>
+    <p>Click the picture to drive again.</p>
+  </div>
+
+  <!-- 1. The Phaser library, kept in our own folder so no internet is needed -->
+  <script src="lib/phaser.min.js"></script>
+  <!-- 2. Our pictures packed as text (made by make_offline.py), so that
+          double-clicking this file from a USB stick works -->
+  <script src="assets.js"></script>
+  <!-- 3. Then our own code, which uses both -->
+  <script src="main.js"></script>
+</body>
+</html>

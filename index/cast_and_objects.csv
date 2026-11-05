@@ -1,0 +1,40 @@
+id,name,kind,description,appears_in,portrait
+ACT-01,Enda,cast,"Spud with glasses; the driver. Running gag: ""Meanwhile, Enda was totally fine.""",IMG-006 IMG-027 IMG-036 IMG-045 IMG-053 IMG-062 IMG-068,"IMG-006:230,340,325,510"
+ACT-02,Annelisa,cast,Spud with long hair. Navigation Award winner; quoted in the epigraph.,IMG-006 IMG-046 IMG-025,"IMG-006:355,340,465,500"
+ACT-03,Rosie,cast,Spud with glasses and hair. Recorded the quotes on WhatsApp; co-author.,IMG-006 IMG-076,"IMG-006:45,520,150,700"
+ACT-04,Joe,cast,Spud with dark fringe. Froze in crisis; RIP his bag. Co-author.,IMG-006 IMG-034 IMG-053,"IMG-006:200,510,300,685"
+ACT-05,Connor (Con),cast,Spud with short dark hair.,IMG-006,"IMG-006:360,505,460,655"
+ACT-06,Natasha (Tash),cast,Spud with glasses and a big bun. Summoned the Ubers.,IMG-006 IMG-011,"IMG-006:485,455,600,650"
+ACT-07,Rhianna (Ranna),cast,Spud with long hair. Chose the train station; reading for her life.,IMG-006 IMG-020 IMG-059,"IMG-006:100,690,210,865"
+ACT-08,Callum,cast,Bearded spud. First to be transformed from a stick figure.,IMG-004 IMG-005 IMG-006,"IMG-006:280,690,390,870"
+ACT-09,Leon,cast,Bearded spud.,IMG-006,"IMG-006:445,665,545,855"
+GST-01,Broad bean lady,guest,Petrified passenger on the plane.,IMG-007 IMG-008,
+GST-02,Taxi drivers,guest,Rough Lyon taxi drivers only a maman could love.,IMG-010,
+GST-03,Uber drivers,guest,"""This is where you have to get out."" / ""Hey madam, want to go to the train station?""",IMG-017 IMG-021,
+GST-04,Le Reception,guest,"Hotel receptionist: ""Pinball?! Non! NON!""",IMG-013,
+GST-05,Green local,guest,Pedestrian nearly hit by the wing mirror.,IMG-030 IMG-031 IMG-032,
+GST-06,The frog,guest,Frog in boiling water. Gets a guest stress meter.,IMG-061 IMG-062,
+GST-07,Le Satnav,guest,"Offers a more adventurous route. Smug "":)"".",IMG-065 IMG-066,
+GST-08,Weather presenter,guest,Today's driving forecast.,IMG-029,
+OBJ-01,The minibus,object,"Pink minibus, the hero vehicle. Stalls in first gear; gets scorched. Gets a guest stress meter.",IMG-026 IMG-028 IMG-043 IMG-056 IMG-067 IMG-073,
+OBJ-02,The plane,object,Flies through the storm cloud; bounces on springs.,IMG-007 IMG-009,
+OBJ-03,Storm cloud,object,Blue cloud with lightning.,IMG-007,
+OBJ-04,Le Taxi,object,Yellow Lyon taxis.,IMG-010,
+OBJ-05,Two Ubers,object,Blue (oui oui) and pink (non non).,IMG-011 IMG-012,
+OBJ-06,Pinball machine,object,Played at 1am.,IMG-013,
+OBJ-07,Pastries and baguettes,object,The flutes they eat here.,IMG-015,
+OBJ-08,Car park barrier,object,BAAM.,IMG-028,
+OBJ-09,Driving forecast dial,object,"Easy, Tough, French.",IMG-029,
+OBJ-10,Wing mirror,object,Almost took a head off.,IMG-031,
+OBJ-11,Random tyre,object,Hit the car. It will come off in the wash.,IMG-039 IMG-040,
+OBJ-12,The roundabout,object,HONK HONK HONK.,IMG-043 IMG-044,
+OBJ-13,Skull sign,object,Warning sign down the lane.,IMG-048,
+OBJ-14,Forest fire,object,Flames on the hill and the mountain.,IMG-048 IMG-063 IMG-064 IMG-067,
+OBJ-15,Joe's bag,object,Claw-marked. RIP.,IMG-053,
+OBJ-16,Log truck,object,Final Destination 2 moment.,IMG-055,
+OBJ-17,Nuclear towers,object,Seen from the road.,IMG-055,
+OBJ-18,Toll ticket,object,DON'T lose the ticket.,IMG-057 IMG-058,
+OBJ-19,HGV convoy,object,"Euro Truck Simulator, French Village Edition.",IMG-060,
+OBJ-20,Exclamation sign,object,"Random, without any context.",IMG-070,
+OBJ-21,Le Mazel,place,The destination; a ruin the fire got to first.,IMG-069 IMG-073,
+OBJ-22,French flag,object,Colours of the FIN page and the afterword.,IMG-075 IMG-076,

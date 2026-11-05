@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Titanic Club Opening</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
+                 font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif; }
+
+    /* The stage holds Phaser's picture, with the title crawl laid on top */
+    #stage { position: relative; width: 100%; height: 100%; }
+
+    /* ---- Star Wars style crawl ---------------------------------------
+       'perspective' makes a 3D space. Tilting the text back (rotateX)
+       makes it shrink into the distance as it moves up the screen.   */
+    #crawl { position: absolute; inset: 0; perspective: 360px; overflow: hidden;
+             pointer-events: none; z-index: 2; }
+    #crawl .tilt { position: absolute; left: 12%; right: 12%; top: 0; bottom: 0;
+                   transform-origin: 50% 100%; transform: rotateX(26deg); }
+    #crawl .text { position: absolute; top: 100%; width: 100%; text-align: center;
+                   color: #ffe81f; text-shadow: 0 0 12px rgba(0,0,0,.8); }
+    #crawl h1 { font-size: 9vmin; line-height: 1.05; margin: 0 0 6vmin; letter-spacing: .04em; }
+    #crawl p  { font-size: 6vmin; margin: 0; font-style: italic; }
+    /* The animation: move the text from below the screen to far away */
+    #crawl.go .text { animation: crawl 13s linear forwards; }
+    @keyframes crawl { to { top: -140%; } }
+    #crawl.gone { opacity: 0; transition: opacity .3s; }
+
+    /* ---- Play / Replay buttons ---- */
+    .button { position: absolute; z-index: 3; left: 50%; top: 50%; transform: translate(-50%, -50%);
+              font: inherit; font-size: 28px; padding: 18px 40px; cursor: pointer;
+              background: #ffe81f; color: #000; border: 4px solid #000; border-radius: 6px; }
+    .small { position: absolute; z-index: 3; right: 16px; top: 16px; font-size: 16px; padding: 8px 14px;
+             background: #222; color: #fff; border: 1px solid #666; border-radius: 6px; cursor: pointer; }
+    .note { position: absolute; z-index: 3; left: 0; right: 0; bottom: 24px; text-align: center;
+            color: #bbb; font-family: Arial, sans-serif; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div id="crawl"><div class="tilt"><div class="text">
+      <h1>TIME FOR DINNER<br>PRODUCTIONS</h1>
+      <p>Presents</p>
+    </div></div></div>
+
+    <button class="button" id="play">&#9654; Play</button>
+    <button class="button" id="replay" hidden>&#8635; Replay</button>
+    <!-- Quick test: play just the music, without the pictures -->
+    <button class="small" id="tune">&#127925; Music only</button>
+    <div class="note" id="note">Sound on (on iPad, check the silent switch)</div>
+  </div>
+
+  <!-- Phaser kept locally, pictures packed as text, then our code -->
+  <script src="lib/phaser.min.js"></script>
+  <script src="assets.js"></script>
+  <script src="music.js"></script>
+  <script src="main.js"></script>
+
+  <script>
+    // These small functions are called from main.js at the right moments.
+    const crawl = document.getElementById("crawl");
+    function startCrawl() { crawl.classList.add("go"); }
+    function stopCrawl()  { crawl.classList.add("gone"); }
+    function showReplay() { document.getElementById("replay").hidden = false; }
+
+    // Play: sound may only start from a tap, so the tap starts everything.
+    document.getElementById("play").addEventListener("click", (e) => {
+      e.target.hidden = true;
+      tune.hidden = true;
+      document.getElementById("note").hidden = true;
+      Music.start(42);
+      window.startShow();
+    });
+
+    // Music only: play (or stop) just the tune, to check it quickly.
+    const tune = document.getElementById("tune");
+    tune.addEventListener("click", () => {
+      if (tune.dataset.on) { Music.stop(); tune.dataset.on = ""; tune.textContent = "\u{1F3B5} Music only"; }
+      else { Music.start(30); tune.dataset.on = "1"; tune.textContent = "\u25A0 Stop music"; }
+    });
+
+    // Replay: simplest is to reload the page and start again.
+    document.getElementById("replay").addEventListener("click", () => location.reload());
+  </script>
+</body>
+</html>
