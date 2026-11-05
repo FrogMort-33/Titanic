@@ -18,7 +18,8 @@
 //   14    The six helmets: the family in the Uber with the driver.
 //   17    "Driver: This is where you have to get out" writes in.
 //   20.5  POP, POP, POP... each passenger pops out of existence,
-//         leaving only the driver.
+//         leaving only the driver. Each pop ends in a chicken "bok!"
+//         (a hint of the next panel).
 //
 //   PANEL 2 - RUUUN!
 //   27.5  The chicken panel, empty.
@@ -27,7 +28,10 @@
 //   33.5  "RUUUN!" and the chickens dash from RIGHT to LEFT, clucking.
 //         (Right to left is Enda's call here. The van keeps right to
 //          left for its comedy retreat.)
-//   42    Fade out. The end.
+//   41    Off the left edge, they FLIP round and dash back LEFT to RIGHT...
+//   47.5  ...off the right edge. A pause: an empty panel.
+//   50    They run back in from the right and park in their own spot.
+//   57    Fade out. The end.
 //
 //  To change WHEN things happen, change the numbers in TIMES below.
 // =====================================================================
@@ -44,8 +48,10 @@
     popOut: 20.5,         // one head every 0.6 seconds
     chickensPanel: 27.5,
     quicklyText: 28,
-    run: 33.5,
-    fadeOut: 42,
+    run: 33.5,            // right to left: 7 seconds
+    runBack: 41,          // flipped, left to right: 6 seconds
+    comeHome: 50,         // in from the right, slowing to a stop: 3 seconds
+    fadeOut: 57,
   };
 
   const W = 1280, H = 900;          // size of the picture area
@@ -63,7 +69,7 @@
       pic("map_blank", "map_blank.jpg");
       for (const c of L.cars) pic(c.key, c.key + ".png");
       for (const key of ["uber_top", "driver_says", "dropped_text", "helmets_empty",
-                         "ruun", "chickens", "quickly_text"]) pic(key, key + ".png");
+                         "ruun", "chickens", "chickens_run", "quickly_text"]) pic(key, key + ".png");
       for (let i = 1; i <= 5; i++) pic("helmet_head" + i, `helmet_head${i}.png`);
       pic("chicken_blank", "chicken_blank.jpg");
     }
@@ -158,6 +164,7 @@
       // POP! One by one, the passengers vanish
       heads.forEach((head, i) => this.at(TIMES.popOut + i * 0.6, () => {
         Deux.pop(i);
+        this.at(0.15, () => Deux.cluck());   // a "bok!" as they go: a hint of the chickens to come
         this.tweens.add({ targets: head, scale: 0, duration: 220, ease: "Back.easeIn" });
         this.puff(panel.x + head.x, panel.y + head.y);
       }));
@@ -220,17 +227,61 @@
       const ruun = this.add.image(L.ruun.x, L.ruun.y, "ruun").setOrigin(0);
       ruun.setOrigin(0.5).setPosition(ruun.x + ruun.width / 2, ruun.y + ruun.height / 2).setScale(0);
 
-      // The flock waits just off the RIGHT edge, then dashes across to
-      // the LEFT and away, bobbing up and down and wobbling as they run.
-      const flock = this.add.image(W + 20, L.chickens.y, "chickens").setOrigin(0);
+      // The flock. While running it uses "chickens_run" (the picture with
+      // its cut-off edges blurred); once parked it swaps to "chickens"
+      // (sharp edges, exactly as drawn).
+      // Its origin is its MIDDLE, so flipping it (flipX) turns it round
+      // on the spot. home = where its middle sits in the drawing.
+      const flock = this.add.image(0, 0, "chickens_run");
+      const homeX = L.chickens.x + flock.width / 2;
+      const homeY = L.chickens.y + flock.height / 2;
+      const offLeft = -flock.width / 2 - 20;          // just off the left edge
+      const offRight = W + flock.width / 2 + 20;      // just off the right edge
+      flock.setPosition(offRight, homeY);
+
+      // Bobbing up and down and wobbling, for as long as they run
+      let bob = null;
+      const startBob = () => {
+        bob = this.tweens.add({ targets: flock, y: homeY - 14, angle: { from: -2, to: 2 },
+                                duration: 110, yoyo: true, repeat: -1 });
+      };
+      const stopBob = () => { if (bob) bob.remove(); flock.setY(homeY).setAngle(0); };
+
+      // 1. RUUUN! Right to left, and away off the left edge
       this.at(TIMES.run - t0, () => {
         this.tweens.add({ targets: ruun, scale: 1, duration: 300, ease: "Back.easeOut" });
         this.tweens.add({ targets: ruun, angle: { from: -6, to: 6 }, duration: 90, yoyo: true, repeat: 20 });
         Deux.panic(7);
         Deux.scurry(7);
-        this.tweens.add({ targets: flock, x: -flock.width - 20, duration: 7000, ease: "Linear" });
-        this.tweens.add({ targets: flock, y: L.chickens.y - 14, angle: { from: -2, to: 2 },
-                          duration: 110, yoyo: true, repeat: -1 });
+        startBob();
+        this.tweens.add({ targets: flock, x: offLeft, duration: 7000, ease: "Linear" });
+      });
+
+      // 2. Turn round (flipX = mirror image, so they face right) and
+      //    dash back left to right, off the right edge
+      this.at(TIMES.runBack - t0, () => {
+        flock.setFlipX(true);
+        Deux.panic(6);
+        Deux.scurry(6);
+        this.tweens.add({ targets: flock, x: offRight, duration: 6000, ease: "Linear",
+                          onComplete: stopBob });       // 3. off screen: hold
+      });
+
+      // 4. Back in from the right, facing left again, slowing down to
+      //    stop in their own spot. Then swap to the sharp picture.
+      this.at(TIMES.comeHome - t0, () => {
+        flock.setFlipX(false);
+        Deux.panic(2.5);
+        startBob();
+        this.tweens.add({
+          targets: flock, x: homeX, duration: 3000, ease: "Quad.easeOut",
+          onComplete: () => {
+            stopBob();
+            flock.setTexture("chickens");
+            Deux.cluck();
+            this.at(0.3, () => Deux.cluck());
+          },
+        });
       });
     }
   }

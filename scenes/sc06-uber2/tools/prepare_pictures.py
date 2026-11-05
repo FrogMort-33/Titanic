@@ -22,7 +22,8 @@ Makes, in ../assets/:
   helmet_head1..5.png   the five passengers' faces (they pop out)
   chicken_blank.jpg     panel 2, empty: no chickens, no words
   quickly_text.png      "Quickly, they ran to safety, like adrenaline-soaked chickens..."
-  chickens.png          the running chickens
+  chickens.png          the chickens, parked in their spot (edges sharp)
+  chickens_run.png      the same, with the cut-off edges blurred, for running
   ruun.png              "RUUUN!"
 
 And layout.js (window.LAYOUT6): where everything goes, in screen pixels.
@@ -252,7 +253,8 @@ fb = (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)
 # so at running speed they look like a blur instead of a hard edge.
 fade = np.clip(np.minimum(np.arange(cpic.size[0]) - fb[0], fb[2] - 1 - np.arange(cpic.size[0])) / 60, 0, 1)
 flock_moving = flock * fade[None, :]
-save_png("chickens", cpic.crop(fb), flock_moving[fb[1]:fb[3], fb[0]:fb[2]])
+save_png("chickens_run", cpic.crop(fb), flock_moving[fb[1]:fb[3], fb[0]:fb[2]])   # while running
+save_png("chickens", cpic.crop(fb), flock[fb[1]:fb[3], fb[0]:fb[2]])              # parked: hard edges
 layout["chickens"] = {"x": fb[0], "y": fb[1]}
 ccover = np.maximum(ccover, grow(flock, 15))
 
