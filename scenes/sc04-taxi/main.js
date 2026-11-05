@@ -116,7 +116,10 @@
       this.at(TIMES.fadeOut, () => {
         TaxiSounds.planeOff(2);
         cam.fadeOut(2000, 0, 0, 0);
-        cam.once("camerafadeoutcomplete", () => showEnd());   // in index.html / play-all.html
+        cam.once("camerafadeoutcomplete", () => {
+          if (window.PLAY_ALL) this.scene.start("uber");   // "Play all": on to scene 5
+          else showEnd();                                   // in index.html
+        });
       });
     }
 
