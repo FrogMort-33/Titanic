@@ -31,7 +31,35 @@
 //   41    Off the left edge, they FLIP round and dash back LEFT to RIGHT...
 //   47.5  ...off the right edge. A pause: an empty panel.
 //   50    They run back in from the right and park in their own spot.
-//   57    Fade out. The end.
+//
+//   THE B TEAM  (page 12, IMG-020, with our loony 8-bit tune)
+//   57    On black, typed out: "Meanwhile in another reality..."
+//         (wobbling), "...er, I mean another Uber.", "Let's call it
+//         the B team.."
+//   69    The page, with every panel EMPTY.
+//   70    The words at the bottom of the page reel in.
+//   79    The top cartoon (Rhianna and the driver), no words. Hold 5.
+//   84    Rhianna: "car hire, here we come!"  Hold 5.
+//   91    The driver: "Hey Madam... want to go to the train station?"
+//   97    Rhianna daydreaming (middle left)... thinking dots, one by one.
+//  103    Rhianna deciding (middle right).
+//  104.5  YE,  GO  ON!  one word at a time, HUGE, in the middle. BOOM!
+//  111    Zoom in on the bottom panel: le car hire, no Uber.
+//  112.5  The Uber jogs in from the left...
+//  116.5  ..."wait, STOP!" - and it speeds off, leaving the shout
+//         hanging in the air. Hold 5.
+//
+//   THE LIFT  (top-left mini panel of IMG-023)
+//  124    The empty waiting room. The "Car hire" sign draws in, then the
+//         painting and the clock appear, and the lift (down).
+//  131    The six potatoes walk in and take their places. Enda and
+//         Annelisa go into the lift. "Be right back".
+//  141    The lift goes up and away.
+//  144    Waiting music. The clock ticks, and time moves on...
+//  154    ...to half past: the lift comes back down.
+//  157.5  Enda and Annelisa step out; everyone CHEERS...
+//  160    ...and off they all go, to the right.
+//  165    Fade out. The end.
 //
 //  To change WHEN things happen, change the numbers in TIMES below.
 // =====================================================================
@@ -51,11 +79,41 @@
     run: 33.5,            // right to left: 7 seconds
     runBack: 41,          // flipped, left to right: 6 seconds
     comeHome: 50,         // in from the right, slowing to a stop: 3 seconds
-    fadeOut: 57,
+    // the B team
+    meanwhile: 57,
+    page: 69,
+    pageWords: 70,
+    topCartoon: 79,
+    rhiannaSays: 84,
+    uberDriverSays: 91,
+    thinking: 97,         // the dots come 1.5, 2.5 and 3.5 seconds later
+    decides: 103,
+    bigWords: 104.5,      // one every 1.1 seconds
+    zoomIn: 111,
+    uberIn: 112.5,        // jogging along for 4 seconds
+    uberGo: 116.5,
+    // the lift
+    liftRoom: 124,
+    sign: 124.5,
+    painting: 127,
+    clock: 128,
+    lift: 129.5,
+    arrive: 131,          // one potato every 0.6 seconds
+    beRightBack: 137.5,
+    liftUp: 141,
+    waiting: 144,         // the clock goes round to half past in 10 seconds
+    liftDown: 154,
+    stepOut: 157.5,
+    cheer: 158.5,
+    exit: 160,
+    fadeOut: 165,
   };
 
   const W = 1280, H = 900;          // size of the picture area
   const L = window.LAYOUT6;         // sprite positions, from layout.js
+  const LB = window.LAYOUT6B;       // ...and for the B team, from layout_bteam.js
+  // The book's style of writing, as near as the computer/iPad has
+  const BOOK_FONT = '"Comic Sans MS", "Chalkboard SE", "Comic Neue", "Trebuchet MS", sans-serif';
 
   class Deuxieme extends Phaser.Scene {
 
@@ -72,6 +130,10 @@
                          "ruun", "chickens", "chickens_run", "quickly_text"]) pic(key, key + ".png");
       for (let i = 1; i <= 5; i++) pic("helmet_head" + i, `helmet_head${i}.png`);
       pic("chicken_blank", "chicken_blank.jpg");
+      // The B team: every picture named in layout_bteam.js, plus the backgrounds
+      for (const key in LB) if (LB[key].x !== undefined) pic(key, key + ".png");
+      pic("bt_page", "bt_page.jpg");
+      pic("lf_room", "lf_room.jpg");
     }
 
     // ---- 2. Set up, then wait for the Play tap ------------------------
@@ -88,6 +150,12 @@
       this.showMap();
       this.at(TIMES.chickensPanel - 1.2, () => { this.cameras.main.fadeOut(1000, 0, 0, 0); Deux.trafficOff(1); });
       this.at(TIMES.chickensPanel, () => { this.cut(); this.showChickens(); });
+      // The B team
+      this.at(TIMES.meanwhile - 1.2, () => this.cameras.main.fadeOut(1000, 0, 0, 0));
+      this.at(TIMES.meanwhile, () => { this.cut(); this.showMeanwhile(); });
+      this.at(TIMES.page, () => { this.cut(); this.showPage(); });
+      this.at(TIMES.liftRoom - 1.2, () => { this.cameras.main.fadeOut(1000, 0, 0, 0); Deux.loonyOff(1.2); });
+      this.at(TIMES.liftRoom, () => { this.cut(); this.showLift(); });
       this.at(TIMES.fadeOut, () => {
         this.cameras.main.fadeOut(2000, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => showEnd());  // in index.html / play-all.html
@@ -101,7 +169,20 @@
       this.cars = [];
       this.tweens.killAll();
       this.children.removeAll(true);
+      this.orbit = null;
+      this.cameras.main.setZoom(1).centerOn(W / 2, H / 2);     // undo any zoom
       this.cameras.main.fadeIn(700);
+    }
+
+    // Put a sprite's origin in its middle WITHOUT moving it (so it can
+    // grow, shrink, spin or bounce around its middle).
+    middle(sprite) {
+      return sprite.setOrigin(0.5).setPosition(sprite.x + sprite.width / 2, sprite.y + sprite.height / 2);
+    }
+
+    // An image at its place from layout_bteam.js
+    placed(key) {
+      return this.add.image(LB[key].x, LB[key].y, key).setOrigin(0);
     }
 
     // =====================================================================
@@ -282,6 +363,273 @@
             this.at(0.3, () => Deux.cluck());
           },
         });
+      });
+    }
+
+    // =====================================================================
+    //  THE B TEAM, 1 - "Meanwhile in another reality..."
+    // =====================================================================
+    // Three lines typed out one letter at a time on black. The first one
+    // wobbles like a dream, until "...er, I mean another Uber" snaps it
+    // back to normal.
+    showMeanwhile() {
+      const style = { fontFamily: BOOK_FONT, fontSize: "64px", color: "#ffe81f", align: "center" };
+      const LINES = [
+        { words: "Meanwhile in another reality...", y: 300, at: 0.5 },
+        { words: "...er, I mean another Uber.", y: 450, at: 4.5 },
+        { words: "Let's call it the B team..", y: 600, at: 8 },
+      ];
+      const texts = LINES.map((line) => this.add.text(W / 2, line.y, "", style).setOrigin(0.5));
+
+      LINES.forEach((line, n) => this.at(line.at, () => this.typeOut(texts[n], line.words)));
+
+      // The dreamy wobble on the first line (a stretchy, swaying tween)
+      this.at(LINES[0].at, () => {
+        Deux.warp();
+        texts[0].wobble = this.tweens.add({ targets: texts[0], scaleY: 1.25, scaleX: 0.92, angle: 3,
+                                            duration: 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      });
+      // "...er, I mean" - snap back to normal
+      this.at(LINES[1].at, () => { texts[0].wobble.remove(); texts[0].setScale(1).setAngle(0); });
+    }
+
+    // Type 'words' into a text object one letter at a time, with a blip
+    typeOut(text, words) {
+      let n = 0;
+      this.loops.push(this.time.addEvent({
+        delay: 55, repeat: words.length - 1, callback: () => {
+          n++;
+          text.setText(words.slice(0, n));
+          if (words[n - 1] !== " " && n % 2) Deux.blip();
+        },
+      }));
+    }
+
+    // =====================================================================
+    //  THE B TEAM, 2 - page 12: Rhianna's Uber
+    // =====================================================================
+    showPage() {
+      const t0 = TIMES.page;
+      const at = (time, fn) => this.at(time - t0, fn);      // times from the TIMES table
+      Deux.loony(TIMES.liftRoom - TIMES.page);
+      this.add.image(0, 0, "bt_page").setOrigin(0);        // the page, every panel empty
+
+      // A panel appears: a quick fade in
+      const panel = (key, time) => {
+        const p = this.placed(key).setAlpha(0);
+        at(time, () => { Deux.ding(); this.tweens.add({ targets: p, alpha: 1, duration: 800 }); });
+        return p;
+      };
+
+      // The words at the bottom reel in, line by line
+      const words = this.placed("bt_words");
+      this.rollDown(words, 0);
+      at(TIMES.pageWords, () => this.rollDown(words, 6000));
+
+      // The top cartoon, then what each of them says
+      panel("bt_top", TIMES.topCartoon);
+      const rSays = this.placed("bt_r_says");
+      this.rollDown(rSays, 0);
+      at(TIMES.rhiannaSays, () => this.rollDown(rSays, 2000));
+      const dSays = this.placed("bt_d_says");
+      this.rollDown(dSays, 0);
+      at(TIMES.uberDriverSays, () => this.rollDown(dSays, 3000));
+
+      // Rhianna thinking: the dots come one at a time
+      panel("bt_midleft", TIMES.thinking);
+      [1, 2, 3].forEach((n) => {
+        const dot = this.placed("bt_dot" + n).setVisible(false);
+        at(TIMES.thinking + 0.5 + n, () => { dot.setVisible(true); Deux.blip(); });
+      });
+
+      // Rhianna decides...
+      panel("bt_midright", TIMES.decides);
+      this.bigWords(["YE,", "GO", "ON!"], TIMES.bigWords - t0);
+      const yeGoOn = this.placed("bt_yegoon");
+      this.rollDown(yeGoOn, 0);
+      at(TIMES.bigWords + 3.6, () => this.rollDown(yeGoOn, 1200));
+
+      // The bottom panel: zoom the camera in on it
+      const bottom = panel("bt_bottom", TIMES.zoomIn);
+      const midX = bottom.x + bottom.width / 2, midY = bottom.y + bottom.height / 2;
+      at(TIMES.zoomIn, () => {
+        this.cameras.main.pan(midX, midY, 1500, "Sine.easeInOut");
+        this.cameras.main.zoomTo(1.8, 1500, "Sine.easeInOut");
+      });
+      this.uberRun(bottom);
+    }
+
+    // Huge words, one at a time, slammed into the middle of the screen
+    bigWords(list, start) {
+      const dark = this.add.rectangle(0, 0, W, H, 0x000000).setOrigin(0).setAlpha(0).setDepth(10);
+      let shown = null;
+      list.forEach((word, i) => this.at(start + i * 1.1, () => {
+        if (i === 0) dark.setAlpha(0.6);
+        if (shown) shown.destroy();
+        shown = this.add.text(W / 2, H / 2, word, {
+          fontFamily: '"Arial Black", "Helvetica Neue", Arial, sans-serif', fontSize: "260px",
+          color: "#ffe81f", stroke: "#000000", strokeThickness: 18,
+        }).setOrigin(0.5).setDepth(11).setScale(3).setAlpha(0);
+        // SLAM: from huge and see-through down to its size, then a shake
+        this.tweens.add({ targets: shown, scale: 1, alpha: 1, duration: 180, ease: "Quad.easeIn",
+                          onComplete: () => { Deux.boom(i); this.cameras.main.shake(180, 0.012); } });
+      }));
+      this.at(start + list.length * 1.1 + 0.5, () => {
+        this.tweens.add({ targets: [dark, shown], alpha: 0, duration: 400 });
+      });
+    }
+
+    // The Uber: jogs in from the left, then "wait, STOP!" and it zooms off,
+    // leaving the shout hanging in the air. A "mask" the shape of the
+    // panel hides the car whenever it's outside the panel.
+    uberRun(bottom) {
+      const t0 = TIMES.page;
+      const at = (time, fn) => this.at(time - t0, fn);
+      const window_ = this.make.graphics({ add: false });
+      window_.fillRect(bottom.x + 4, bottom.y + 4, bottom.width - 8, bottom.height - 8);
+      const mask = window_.createGeometryMask();
+
+      const car = this.placed("bt_uber").setMask(mask);
+      const homeX = car.x, homeY = car.y;
+      car.x = bottom.x - car.width;                       // waiting just outside the panel, left
+      const lines = this.placed("bt_zoom").setMask(mask).setVisible(false);
+      const linesOffset = lines.x - homeX;                 // speed lines sit just behind the car
+      const shout = this.middle(this.placed("bt_stop")).setScale(0);
+
+      // Jogging along: steady speed, bouncing up and down
+      let bob = null;
+      at(TIMES.uberIn, () => {
+        Deux.putter(TIMES.uberGo - TIMES.uberIn);
+        this.tweens.add({ targets: car, x: homeX, duration: (TIMES.uberGo - TIMES.uberIn) * 1000, ease: "Linear" });
+        bob = this.tweens.add({ targets: car, y: homeY - 5, duration: 140, yoyo: true, repeat: -1 });
+      });
+
+      // "wait, STOP!" ... and it's gone
+      at(TIMES.uberGo, () => {
+        bob.remove(); car.y = homeY;
+        this.tweens.add({ targets: shout, scale: 1, duration: 250, ease: "Back.easeOut" });
+        lines.setPosition(car.x + linesOffset, homeY + (lines.y - homeY)).setVisible(true);
+        Deux.zoom();
+        this.tweens.add({ targets: [car, lines], x: "+=" + (bottom.width + 300), duration: 800,
+                          delay: 150, ease: "Quad.easeIn" });
+      });
+    }
+
+    // =====================================================================
+    //  THE B TEAM, 3 - the lift
+    // =====================================================================
+    showLift() {
+      const t0 = TIMES.liftRoom;
+      const at = (time, fn) => this.at(time - t0, fn);
+      this.add.image(0, 0, "lf_room").setOrigin(0);
+
+      // The "Car hire" sign draws in, then the painting and the clock pop up
+      const sign = this.placed("lf_sign");
+      this.rollDown(sign, 0);
+      at(TIMES.sign, () => this.rollDown(sign, 2000));
+      const pop = (sprite, time) => {
+        sprite.setScale(0);
+        at(time, () => { Deux.pop(0); this.tweens.add({ targets: sprite, scale: 1, duration: 450, ease: "Back.easeOut" }); });
+      };
+      pop(this.middle(this.placed("lf_painting")), TIMES.painting);
+
+      // The clock: its face, with hands we draw ourselves so they can turn.
+      // Both go in a "container" at the clock's middle, so the whole clock
+      // can pulse bigger and smaller.
+      const [cx, cy] = LB.lf_clock_centre, r = LB.lf_clock_radius;
+      const clock = this.add.container(cx, cy);
+      clock.add(this.add.image(LB.lf_clock.x - cx, LB.lf_clock.y - cy, "lf_clock").setOrigin(0));
+      const hands = this.add.graphics();
+      clock.add(hands);
+      const time = { minutes: 60 };                   // minutes past twelve: 60 = one o'clock
+      const drawHands = () => {
+        // angle round the clock: 0 = pointing up (12), going clockwise
+        const hand = (angle, length, width) => {
+          hands.lineStyle(width, 0x1d1b14);
+          hands.lineBetween(0, 0, Math.sin(angle) * length, -Math.cos(angle) * length);
+        };
+        hands.clear();
+        hand((time.minutes / 60) * Math.PI * 2, r * 0.62, 5);          // minute hand: once round an hour
+        hand((time.minutes / 720) * Math.PI * 2, r * 0.42, 7);         // hour hand: once round in 12 hours
+      };
+      drawHands();
+      pop(clock, TIMES.clock);
+
+      // The lift, down on our floor
+      const lift = this.placed("lf_lift").setDepth(1).setAlpha(0);
+      at(TIMES.lift, () => { Deux.ding(); this.tweens.add({ targets: lift, alpha: 1, duration: 600 }); });
+
+      // The six potatoes walk in from the left to their places.
+      // 5 and 6 are Enda and Annelisa: their places are IN the lift.
+      const pots = [1, 2, 3, 4, 5, 6].map((n) => {
+        const p = this.placed("lf_pot" + n).setDepth(2);
+        p.homeX = p.x; p.homeY = p.y;
+        p.x = -p.width - 20;
+        return p;
+      });
+      const walk = (p, toX, seconds, then) => {
+        const bob = this.tweens.add({ targets: p, y: p.homeY - 10, duration: 130, yoyo: true, repeat: -1 });
+        this.tweens.add({ targets: p, x: toX, duration: seconds * 1000, ease: "Linear",
+                          onComplete: () => { bob.remove(); p.y = p.homeY; if (then) then(); } });
+      };
+      pots.forEach((p, i) => at(TIMES.arrive + i * 0.6, () => { Deux.blip(); walk(p, p.homeX, 3 + i * 0.15); }));
+
+      // "Be right back"
+      const brb = this.placed("lf_brb").setDepth(3);
+      this.rollDown(brb, 0);
+      at(TIMES.beRightBack, () => this.rollDown(brb, 1500));
+
+      // Up goes the lift, with Enda and Annelisa in it
+      const riders = [lift, pots[4], pots[5]];
+      at(TIMES.liftUp, () => {
+        this.tweens.add({ targets: brb, alpha: 0, duration: 400 });
+        Deux.whirr(3);
+        this.tweens.add({ targets: riders, y: "-=" + (lift.y + lift.height + 40), duration: 3000, ease: "Sine.easeIn" });
+      });
+
+      // Waiting... the clock ticks (and pulses), time flies round to half
+      // past one, and the four left behind fidget
+      at(TIMES.waiting, () => {
+        const seconds = TIMES.liftDown - TIMES.waiting;
+        Deux.waiting(seconds + 1);
+        this.tweens.add({ targets: time, minutes: 90, duration: seconds * 1000, ease: "Linear", onUpdate: drawHands });
+        this.loops.push(this.time.addEvent({ delay: 500, repeat: seconds * 2 - 1, callback: () => {
+          Deux.tick();
+          this.tweens.add({ targets: clock, scale: 1.12, duration: 80, yoyo: true });
+        } }));
+        this.loops.push(this.time.addEvent({ delay: 900, repeat: Math.floor(seconds / 0.9) - 1, callback: () => {
+          const p = pots[Math.floor(Math.random() * 4)];
+          this.tweens.add({ targets: p, y: p.homeY - 14, duration: 150, yoyo: true });
+        } }));
+      });
+
+      // Half past: down comes the lift
+      at(TIMES.liftDown, () => {
+        Deux.waitingOff(1);
+        Deux.ding();
+        Deux.whirr(3);
+        riders.forEach((p) => this.tweens.add({ targets: p, y: p === lift ? LB.lf_lift.y : p.homeY,
+                                                 duration: 3000, ease: "Sine.easeOut" }));
+      });
+
+      // Out they step...
+      at(TIMES.stepOut, () => {
+        walk(pots[4], pots[4].homeX - 170, 0.7);
+        walk(pots[5], pots[5].homeX - 130, 0.7);
+      });
+
+      // ...HOORAY! Everyone jumps for joy...
+      at(TIMES.cheer, () => {
+        Deux.cheer();
+        pots.forEach((p, i) => this.tweens.add({ targets: p, y: p.homeY - 50, duration: 220, yoyo: true,
+                                                 repeat: 1, delay: i * 40, ease: "Quad.easeOut" }));
+      });
+
+      // ...and off they go, to the right (the ones nearest the right first)
+      at(TIMES.exit, () => {
+        Deux.scurry(3);
+        [...pots].sort((a, b) => b.x - a.x).forEach((p, i) =>
+          this.at(i * 0.3, () => walk(p, W + 40, 2.6 - i * 0.1)));
       });
     }
   }
