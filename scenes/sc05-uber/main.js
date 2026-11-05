@@ -22,7 +22,8 @@
 //   28    The words write in: "What ensued was the calm before the storm..."
 //   34    Our potato heads appear one by one in the six windows.
 //   44.5  (after holding 5) the bottom picture is revealed, rolling down
-//         like a blind: Le Reception, "PINBALL?! NON! NON!"
+//         like a blind: Le Reception, "PINBALL?! NON! NON!", with
+//         pinball machine noises (flippers, bumpers, score ticks).
 //
 //   PART 3 - SLEEPY TIME  (IMG-014's top picture, Brahms' Lullaby)
 //   51.5  Everyone asleep in the bunk beds, under the blue-white-red
@@ -30,12 +31,15 @@
 //
 //   PART 4 - TRES BIEN!  (IMG-014's bottom picture, our own happy tune)
 //   64    An empty page, just the potato.
-//   65.5  Cakes and pastries fly in one by one; the potato ducks each time.
-//   71    ...and they ORBIT round and round him.
-//   78    The last flute (French bread!) flies in and he CATCHES it.
+//   64.8  The words write in at the top, on a strip of yellow paper:
+//         "After a gentle snooze, the Titanic Club rolled to the nearest
+//          patisserie..." They stay to be read, then fade away.
+//   71.5  Cakes and pastries fly in one by one; the potato ducks each time.
+//   77    ...and they ORBIT round and round him.
+//   84    The last flute (French bread!) flies in and he CATCHES it.
 //         "Très Bien" pops up.
-//   80.5  His words write in: "you mean, they eat the flutes here?"
-//   88    Fade out. The end of Part One.
+//   86.5  His words write in: "you mean, they eat the flutes here?"
+//   94    Fade out. The end of Part One.
 //
 //  STORY RULE: cars and the van travel LEFT to RIGHT. The Ubers are
 //  drawn facing right, so they drive in nose first from the left.
@@ -60,11 +64,12 @@
     reveal: 44.5,
     bunks: 51.5,
     pastry: 64,
-    pastriesIn: 65.5,     // one every 0.6 seconds after this
-    orbit: 71,
-    flute: 78,            // it lands 1.2 seconds later
-    flutesText: 80.5,
-    fadeOut: 88,
+    introText: 64.8,      // "After a gentle snooze..." (fades as the pastries come)
+    pastriesIn: 71.5,     // one every 0.6 seconds after this
+    orbit: 77,
+    flute: 84,            // it lands 1.2 seconds later
+    flutesText: 86.5,
+    fadeOut: 94,
   };
 
   const W = 1280, H = 900;          // size of the picture area
@@ -97,7 +102,7 @@
       pic("bunks", "bunks.jpg");
       pic("pastry_blank", "pastry_blank.jpg");
       for (const key of PASTRIES) pic(key, key + ".png");
-      for (const key of ["pa_potato", "pa_flute", "pa_tres_bien", "pa_flutes_text"]) pic(key, key + ".png");
+      for (const key of ["pa_potato", "pa_flute", "pa_tres_bien", "pa_flutes_text", "pa_intro_text"]) pic(key, key + ".png");
     }
 
     // ---- 2. Set up, then wait for the Play tap ------------------------
@@ -121,7 +126,10 @@
       this.at(TIMES.fadeOut, () => {
         UberSounds.cafeOff(2.5);
         this.cameras.main.fadeOut(2500, 0, 0, 0);
-        this.cameras.main.once("camerafadeoutcomplete", () => showEnd());  // in index.html / play-all.html
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+          if (window.PLAY_ALL) this.scene.start("uber2");   // "Play all": on to episode 6
+          else showEnd();                                    // in index.html
+        });
       });
     }
 
@@ -327,7 +335,8 @@
       this.rollDown(bottom, 0);
       this.at(TIMES.reveal - t0, () => {
         this.rollDown(bottom, 2500, true);
-        this.at(2.5, () => UberSounds.pinball());
+        UberSounds.pinballMachine(5);              // flippers, bumpers, ticks...
+        this.at(2.5, () => UberSounds.pinball());  // ...and a jingle as it lands
       });
     }
 
@@ -404,6 +413,20 @@
       const duck = () => this.tweens.add({
         targets: potato, scaleY: 0.78, scaleX: 1.08, duration: 160, yoyo: true, ease: "Quad.easeOut",
       });
+
+      // The words at the top, on a strip of the book's yellow paper with
+      // a dark edge. They write in, stay to be read, then fade away
+      // just before the pastries start flying.
+      const intro = this.add.image(W / 2, 24, "pa_intro_text").setOrigin(0.5, 0).setDepth(5);
+      const strip = this.add.rectangle(W / 2, 12, intro.width + 60, intro.height + 24, PAPER)
+        .setOrigin(0.5, 0).setStrokeStyle(4, 0x1d1b14).setDepth(4).setAlpha(0);
+      this.rollDown(intro, 0);
+      this.at(TIMES.introText - t0, () => {
+        this.tweens.add({ targets: strip, alpha: 1, duration: 400 });
+        this.rollDown(intro, 4000);
+      });
+      this.at(TIMES.pastriesIn - t0 - 0.8, () =>
+        this.tweens.add({ targets: [strip, intro], alpha: 0, duration: 700 }));
 
       // Each pastry: placed at its spot in the picture ("home"), turning
       // round its middle, hidden until it flies in.

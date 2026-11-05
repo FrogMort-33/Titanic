@@ -11,6 +11,7 @@
 //    UberSounds.rev()           VROOM VROOM! an engine revving up
 //    UberSounds.ding(n)         a bright little "ding" (window lights up)
 //    UberSounds.pinball()       pinball machine: ding-ding-ding-DING!
+//    UberSounds.pinballMachine(secs)  a pinball machine in full swing
 //    UberSounds.lullaby(secs)   Brahms' Lullaby, on a soft music box
 //    UberSounds.lullabyOff(s)   fade the lullaby away
 //    UberSounds.cafe(secs)      our own bouncy, happy "patisserie" tune
@@ -292,6 +293,48 @@ const UberSounds = (() => {
       ["E5", "G5", "C6"].forEach((n, i) => note(n, i * 0.12, 0.12, "square", 0.08, out));
       note("C6", 0.4, 0.5, "square", 0.1, out);
       note("G5", 0.4, 0.5, "triangle", 0.25, out);
+    },
+
+    // A whole pinball machine going for 'seconds': the ball rattling
+    // round (a quiet rumble), flippers clacking, bumpers going
+    // "BOING-ping!" and the score clicking up "tick-tick-tick".
+    pinballMachine(seconds = 5) {
+      wake();
+      const t0 = ctx.currentTime;
+      // The rolling ball: deep hiss through a low filter, wobbling
+      const n = Math.floor(ctx.sampleRate * seconds);
+      const buffer = ctx.createBuffer(1, n, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < n; i++) data[i] = Math.random() * 2 - 1;
+      const roll = ctx.createBufferSource(); roll.buffer = buffer;
+      const low = ctx.createBiquadFilter(); low.type = "lowpass"; low.frequency.value = 300;
+      const rg = ctx.createGain();
+      rg.gain.setValueAtTime(0, t0);
+      rg.gain.linearRampToValueAtTime(0.15, t0 + 0.3);
+      rg.gain.setValueAtTime(0.15, t0 + seconds - 0.5);
+      rg.gain.linearRampToValueAtTime(0, t0 + seconds);
+      roll.connect(low).connect(rg).connect(out);
+      roll.start(t0);
+      // Flippers: a low "dum" and a bright "tss" together = CLACK
+      for (let t = 0.2; t < seconds; t += 0.4 + Math.random() * 0.7) {
+        drum(t, false, 0.6, out); drum(t, true, 0.25, out);
+      }
+      // Bumpers: a bright note that bends DOWN fast = BOING-ping
+      for (let t = 0.35; t < seconds - 0.3; t += 0.25 + Math.random() * 0.5) {
+        const when = t0 + t, start = [1568, 1760, 2093, 1319][Math.floor(Math.random() * 4)];
+        const osc = ctx.createOscillator(); osc.type = "square";
+        osc.frequency.setValueAtTime(start, when);
+        osc.frequency.exponentialRampToValueAtTime(start / 2, when + 0.12);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.06, when);
+        g.gain.exponentialRampToValueAtTime(0.001, when + 0.15);
+        osc.connect(g).connect(out);
+        osc.start(when); osc.stop(when + 0.16);
+      }
+      // The score going up: a run of quick high ticks, now and then
+      for (let t = 1; t < seconds - 0.5; t += 1.6) {
+        for (let k = 0; k < 6; k++) note("C6", t + k * 0.05, 0.03, "square", 0.04, out);
+      }
     },
 
     // Brahms' Lullaby on a music box (triangle = soft and round)

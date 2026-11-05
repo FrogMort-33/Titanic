@@ -22,6 +22,7 @@ Makes, in ../assets/:
   hotel_bottom.png          the bottom picture (reception, pinball...)
   ensued_text.png           "What ensued was the calm before the storm..."
   bunks.jpg                 page 3: everyone asleep in the bunk beds (IMG-014)
+  pa_intro_text.png         "After a gentle snooze, the Titanic Club rolled..." 
 
 And layout.js (window.LAYOUT5): where everything goes, in screen pixels.
 
@@ -375,6 +376,16 @@ def panel_words(name, box):
 panel_words("pa_tres_bien", (245, 598, 312, 648))
 panel_words("pa_flutes_text", (272, 812, 498, 908))
 layout["pa_centre"] = list(pto(366, 700))             # the middle of the potato
+
+# The words between the two pictures on the page ("After a gentle
+# snooze..."): just the printed ink, put on clean paper by main.js,
+# at the top of the pastry panel.
+ib = tuple(round(v * s14) for v in (100, 404, 650, 497))
+icrop = bmaster.crop(ib)
+icrop = icrop.resize((1100, round(icrop.height * 1100 / icrop.width)), Image.LANCZOS)
+iink = ink_strength(icrop)
+iink[:14] = 0                  # a smudge of the painting above sneaks in at the top
+save_png("pa_intro_text", Image.new("RGB", icrop.size, (28, 26, 24)), iink)
 
 # The empty page: all of that rubbed out
 # (Only plain paper is used to fill the holes: anything dark nearby,
