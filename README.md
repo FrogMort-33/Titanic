@@ -12,4 +12,4 @@ Rules we keep across every scene, so the story feels consistent:
 
 - **The van travels LEFT to RIGHT** when it's going somewhere (the opening, and its return in scene 2).
 - **RIGHT to LEFT is reserved** for a comedy "retreat" later in the story. Don't use it for anything else.
-- **The taxis also travel LEFT to RIGHT** (scene 4). Only the plane may fly both ways, because it's caught in the storm.
+- **The taxis drive in from the RIGHT** (scene 4), because they're drawn facing left and must come in nose first (Enda's call). The plane may fly both ways.

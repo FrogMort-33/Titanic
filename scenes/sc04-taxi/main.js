@@ -10,16 +10,18 @@
 //        lightning bolt chases it, and every few seconds (TIMES.zaps)
 //        it ZAPS the plane: flash, thunder, the plane jolts.
 //    9   Our family walks in from the left to their spot.
-//   13.5 The first taxi jogs in from the left (engine, dust puffs) and
-//        parks on the right...
-//   17   ...then the second taxi, which parks on the left.
+//   13.5 The first taxi jogs in from the RIGHT, nose first (engine,
+//        dust puffs), and drives all the way to the left-hand spot...
+//   17   ...then the second taxi, which parks on the right.
 //   22   POP! A taxi driver appears on top of each taxi...
 //   24   ...and they shuffle about, back and forth, on their roofs.
 //   27   FINALLY the family's question: "umm... which taxi do we get?"
 //   34   Fade out. The end (for now!).
 //
-//  STORY RULE: cars and the van travel LEFT to RIGHT. (Right-to-left is
-//  saved for a comedy "retreat" later.) The plane may go both ways.
+//  STORY RULE: the van travels LEFT to RIGHT (right-to-left is saved
+//  for its comedy "retreat" later). The taxis are drawn facing LEFT, so
+//  they drive in from the right, nose first (Enda's call). The plane may
+//  go both ways.
 //
 //  To change WHEN things happen, change the numbers in TIMES below.
 // =====================================================================
@@ -32,8 +34,8 @@
     plane: 5,
     zaps: [8, 11.5, 15, 18.5, 22, 25.5, 29, 32.5],   // every lightning strike
     family: 9,
-    taxiRight: 13.5,      // the taxi that parks on the right comes first
-    taxiLeft: 17,
+    taxiLeft: 13.5,       // the taxi that parks on the left comes first
+    taxiRight: 17,        // (so neither has to drive through the other)
     drivers: 22,
     shuffle: 24,
     question: 27,
@@ -100,8 +102,8 @@
 
       // The taxis jog in (the right-hand one first, so it doesn't have to
       // drive through the other one)
-      this.at(TIMES.taxiRight, () => this.taxiArrives("taxi2", 4500));
-      this.at(TIMES.taxiLeft, () => this.taxiArrives("taxi1", 3500));
+      this.at(TIMES.taxiLeft, () => this.taxiArrives("taxi1", 4500));
+      this.at(TIMES.taxiRight, () => this.taxiArrives("taxi2", 3500));
 
       // POP! The drivers, then they shuffle about
       this.at(TIMES.drivers, () => this.popDriver("driver1", 0));
@@ -197,12 +199,13 @@
     }
 
     // ---- The taxis -------------------------------------------------------
-    // Jog in from the left (bouncing and rocking, with puffs of dust)
+    // Jog in from the RIGHT, nose first (bouncing and rocking, with puffs
+    // of dust)
     // and slow down to stop at its spot.
     taxiArrives(key, duration) {
       const taxi = this.addSprite(key).setDepth(DEPTH.taxi);
       const spotX = taxi.x, spotY = taxi.y;
-      taxi.x = -taxi.width;
+      taxi.x = W;                                 // start just off the right edge
       TaxiSounds.putter();
 
       // Jogging: bounce up and down and rock slightly
@@ -211,14 +214,14 @@
         duration: 140, yoyo: true, repeat: -1,
       });
 
-      // Dust puffs from behind the back wheel
+      // Dust puffs from behind the back wheel (the taxi's RIGHT end)
       const dust = this.time.addEvent({
         delay: 110, loop: true,
         callback: () => {
-          const puff = this.add.circle(taxi.x + 20, spotY + taxi.height - 25, 10 + Math.random() * 12, 0xc9c2a8)
+          const puff = this.add.circle(taxi.x + taxi.width - 20, spotY + taxi.height - 25, 10 + Math.random() * 12, 0xc9c2a8)
             .setAlpha(0.85).setDepth(DEPTH.dust);
           this.tweens.add({
-            targets: puff, x: puff.x - 70, y: puff.y - 30, scale: 2.2, alpha: 0, duration: 700,
+            targets: puff, x: puff.x + 70, y: puff.y - 30, scale: 2.2, alpha: 0, duration: 700,
             onComplete: () => puff.destroy(),
           });
         },
