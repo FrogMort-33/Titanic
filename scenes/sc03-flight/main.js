@@ -1,5 +1,6 @@
 // =====================================================================
-//  main.js  -  SC-03 "Flights of Fantasy Fun !"   (uses IMG-007)
+//  main.js  -  SC-03 "Flights of Fantasy Fun !"
+//              (uses IMG-007, then IMG-008, then IMG-009)
 // =====================================================================
 //
 //  THE PLAN (times in seconds after the viewer taps Play)
@@ -11,7 +12,23 @@
 //        More thunder now and then (see TIMES.thunder).
 //   12   The plane flies (left to right) into the storm cloud...
 //   15   ...and gets thrown about inside it. Hold 5 seconds.
-//   20   Fade out. (More of scene 3, IMG-008 and IMG-009, comes later.)
+//
+//   PART 2 - inside the plane (IMG-008)
+//   20   CUT inside: close up on the "Fasten your seat belts" sign,
+//        then the camera pulls back to show the whole cabin (no broad
+//        bean yet!). Lightning flickers in the window with thunder, and
+//        the cabin shakes (TIMES.windowFlash).
+//   26   The words write in: "The Titanic Club kept their cool, unlike
+//        the petrified lady above, portrayed by a broad bean."
+//   31   SCREAM! The broad bean pops up from behind her seat and ducks
+//        down again, several times (TIMES.screams), and the green spud
+//        below her pulls a face each time.
+//
+//   PART 3 - life-affirming turbulence (IMG-009)
+//   39.5 CUT to IMG-009. The middle plane goes BOING on its spring.
+//        Only "...arrived in a dark, closed airport," is showing.
+//   44.5 The rest of the words write in. Hold 5.
+//   52   Fade out: the end of scene 3.
 //
 //  Change the numbers in TIMES to re-time the whole scene.
 // =====================================================================
@@ -26,14 +43,21 @@
     thunder: [10, 13, 15.5, 17.2, 19],   // every clap of thunder
     flyIn: 12,
     bumpy: 15,
-    fadeOut: 20,
+    cabin: 20,
+    windowFlash: [22, 24.5, 27, 29.5],
+    cabinText: 26,
+    screams: [31, 33.5, 35.5, 37.2],
+    turbulence: 39.5,
+    restOfText: 44.5,
+    fadeOut: 52,
   };
 
   const W = 1280, H = 900;          // size of the picture area
   const L = window.LAYOUT3;         // sprite positions, from layout.js
 
   // Which things are drawn in front of which: bigger numbers in front.
-  const DEPTH = { sky: 0, cloud: 1, lines: 2, plane: 3, title: 4 };
+  const DEPTH = { sky: 0, cloud: 1, lines: 2, plane: 3, title: 4,
+                  window_flash: 1, bean: 1, cabin_text: 2 };
 
 
   class Flight extends Phaser.Scene {
@@ -49,6 +73,16 @@
       pic("plane", "plane.png");
       pic("title", "title.png");
       pic("cloud", "cloud.png");
+      // part 2
+      pic("cabin_blank", "cabin_blank.jpg");
+      pic("bean", "bean.png");
+      pic("window_flash", "window_flash.png");
+      pic("cabin_text", "cabin_text.png");
+      // part 3
+      pic("turb_blank", "turb_blank.jpg");
+      pic("boing", "boing.png");
+      pic("text_rest1", "text_rest1.png");
+      pic("text_rest2", "text_rest2.png");
     }
 
     // ---- 2. Set up, then wait for the Play tap ------------------------
@@ -109,10 +143,162 @@
       // Bumpy! Thrown about at random inside the cloud
       this.at(TIMES.bumpy, () => this.bumpAbout(plane, plane.x, plane.y));
 
-      this.at(TIMES.fadeOut, () => {
-        FlightSounds.engineOff(2);
+      this.at(TIMES.cabin, () => { this.cut(); this.showCabin(); });
+    }
+
+    // Wipe the screen ready for the next shot.
+    cut() {
+      this.children.removeAll(true);
+      this.tweens.killAll();
+      this.time.removeAllEvents();
+      this.cameras.main.setZoom(1).setScroll(0, 0).removeBounds();
+    }
+
+    // ---- PART 2: inside the plane ----------------------------------------
+    showCabin() {
+      const t0 = TIMES.cabin;
+      const cam = this.cameras.main;
+      this.add.image(0, 0, "cabin_blank").setOrigin(0);
+
+      // Start right up close on the seatbelt sign, then pull back.
+      // (setBounds stops the camera looking past the edge of the picture.)
+      cam.setBounds(0, 0, W, H);
+      cam.setZoom(4);
+      cam.centerOn(L.sign[0], L.sign[1]);
+      cam.flash(300, 255, 255, 255);
+      this.at(1.5, () => {
+        cam.zoomTo(1, 4000, "Sine.easeInOut");
+        cam.pan(W / 2, H / 2, 4000, "Sine.easeInOut");
+      });
+
+      // The lightning in the window: hidden until each flash
+      const flash = this.addSprite("window_flash").setVisible(false);
+      for (const t of TIMES.windowFlash) this.at(t - t0, () => this.flicker(flash));
+
+      // The words write in
+      const words = this.addSprite("cabin_text");
+      this.writeIn(words, 0);
+      this.at(TIMES.cabinText - t0, () => this.writeIn(words, 3500));
+
+      // The broad bean hides behind her seat. She "pops up" by growing
+      // upwards from the seat edge: her origin is at her bottom, and her
+      // height (scaleY) goes from 0 (hidden) to 1 (all of her).
+      const bean = this.addSprite("bean");
+      bean.setOrigin(0.5, 1).setPosition(bean.x + bean.width / 2, bean.y + bean.height);
+      bean.setScale(1, 0);
+      // Her hands cover two short bits of the seat's edge in the picture,
+      // so draw that edge line back in, behind her.
+      const [[ax, ay], [bx, by]] = L.seat_edge;
+      this.add.line(0, 0, ax, ay, bx, by, 0x1d1b14).setOrigin(0).setLineWidth(2.5).setDepth(0.5);
+
+      // The green spud's screaming face (drawn on top of her real face)
+      const face = this.makeScreamFace();
+
+      TIMES.screams.forEach((t) => this.at(t - t0, () => this.scream(bean, face)));
+
+      this.at(TIMES.turbulence - t0, () => { this.cut(); this.showTurbulence(); });
+    }
+
+    // Lightning in the window: on, off, on, off... with thunder and a shake
+    flicker(flash) {
+      FlightSounds.thunder();
+      this.cameras.main.shake(700, 0.008);
+      [0, 90, 170, 300, 380].forEach((ms, i) =>
+        this.time.delayedCall(ms, () => flash.setVisible(i % 2 === 0)));   // even = on
+      this.time.delayedCall(520, () => flash.setVisible(false));
+    }
+
+    // One scream: the bean pops up, the green spud pulls a face, then
+    // both go back to normal.
+    scream(bean, face) {
+      FlightSounds.scream();
+      this.tweens.add({ targets: bean, scaleY: 1, duration: 160, ease: "Back.easeOut" });
+      this.tweens.add({ targets: bean, angle: { from: -4, to: 4 }, duration: 70, yoyo: true, repeat: 6 });
+      this.time.delayedCall(1000, () =>
+        this.tweens.add({ targets: bean, scaleY: 0, angle: 0, duration: 160, ease: "Back.easeIn" }));
+      face.setVisible(true);
+      this.tweens.add({ targets: face, x: face.x + 3, duration: 40, yoyo: true, repeat: 12 });
+      this.tweens.add({ targets: face.mouth, scaleY: { from: 0.4, to: 1.3 }, duration: 250, yoyo: true, repeat: 1 });
+      this.time.delayedCall(1100, () => face.setVisible(false));
+    }
+
+    // Big round eyes and a wide-open mouth, made from simple shapes.
+    // They sit exactly over the green spud's own face (positions from
+    // layout.js) and are only shown while she's screaming.
+    makeScreamFace() {
+      const f = L.spud_face, r = f.size;
+      const face = this.add.container(0, 0).setDepth(3).setVisible(false);
+      for (const [x, y] of [f.eye1, f.eye2]) {
+        face.add(this.add.circle(x, y, r * 1.3, 0xffffff).setStrokeStyle(3, 0x1d1b14));  // eye white
+        face.add(this.add.circle(x, y, r * 0.45, 0x1d1b14));                             // pupil
+      }
+      face.mouth = this.add.ellipse(f.mouth[0], f.mouth[1] + r, r * 1.6, r * 2.6, 0x3a1010)
+        .setStrokeStyle(3, 0x1d1b14);
+      face.add(face.mouth);
+      return face;
+    }
+
+    // ---- PART 3: life-affirming turbulence --------------------------------
+    showTurbulence() {
+      const t0 = TIMES.turbulence;
+      FlightSounds.engineOff(1.5);
+
+      // This page is taller than the screen: shrink it to fit (k) and put
+      // it in the middle, on paper-coloured background. A "container"
+      // holds the page and its sprites, so they all shrink together.
+      const T = L.turb, k = H / T.h;
+      this.add.rectangle(0, 0, W, H, Phaser.Display.Color.HexStringToColor(T.paper).color).setOrigin(0);
+      const page = this.add.container((W - T.w * k) / 2, 0).setScale(k);
+      page.add(this.add.image(0, 0, "turb_blank").setOrigin(0));
+      this.cameras.main.fadeIn(600);
+
+      // The plane on its spring. Its origin is at the bottom of the spring,
+      // so squashing/stretching it (scaleY) works like a real spring.
+      const b = L.boing, img = this.textures.get("boing").getSourceImage();
+      const spring = this.add.image(b.x + img.width / 2, b.y + img.height, "boing").setOrigin(0.5, 1);
+      page.add(spring);
+      this.boingForever(spring);
+
+      // The rest of the words, hidden until later
+      const rest1 = this.add.image(L.text_rest1.x, L.text_rest1.y, "text_rest1").setOrigin(0);
+      const rest2 = this.add.image(L.text_rest2.x, L.text_rest2.y, "text_rest2").setOrigin(0);
+      page.add([rest1, rest2]);
+      this.writeIn(rest1, 0);
+      this.writeIn(rest2, 0);
+      this.at(TIMES.restOfText - t0, () => {
+        this.writeIn(rest1, 700);
+        this.at(0.7, () => this.writeIn(rest2, 3000));
+      });
+
+      this.at(TIMES.fadeOut - t0, () => {
         this.cameras.main.fadeOut(2000, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => showEnd());   // in index.html
+      });
+    }
+
+    // BOING: squash the spring down, then let it spring back up with a
+    // wobble ("Elastic" ease), with the boing sound. Again and again.
+    boingForever(spring) {
+      this.tweens.add({
+        targets: spring, scaleY: 0.55, scaleX: 1.1, duration: 250, ease: "Sine.easeIn",
+        onComplete: () => {
+          FlightSounds.boing();
+          this.tweens.add({
+            targets: spring, scaleY: 1, scaleX: 1, duration: 1100, ease: "Elastic.easeOut",
+            onComplete: () => this.boingForever(spring),
+          });
+        },
+      });
+    }
+
+    // "Write in": show a sprite from left to right, like a pen drawing it.
+    writeIn(sprite, duration) {
+      const reveal = { w: 0 };
+      sprite.setCrop(0, 0, 0, sprite.height);
+      if (duration === 0) return;
+      this.tweens.add({
+        targets: reveal, w: sprite.width, duration,
+        onUpdate: () => sprite.setCrop(0, 0, reveal.w, sprite.height),
       });
     }
 

@@ -25,11 +25,15 @@ STORY = Path(__file__).resolve().parents[1]  # .../storybook
 WIDTH = 1280                                 # every background is made this wide
 
 
-def open_master(name):
-    """Open a master photo the right way up, and work out the scale factor."""
+def open_master(name, rotate_clockwise=0):
+    """Open a master photo the right way up, and work out the scale factor.
+    rotate_clockwise: the same number as in index/images.csv for this photo
+    (some photos were taken sideways)."""
     img = ImageOps.exif_transpose(Image.open(STORY / "originals" / name)).convert("RGB")
-    return img, img.height / 1000            # working copies are 1000 px tall
-
+    if rotate_clockwise:
+        img = img.rotate(-rotate_clockwise, expand=True)   # rotate() turns anti-clockwise
+    # Working copies are 1000 px on their LONG side, so that's our ruler
+    return img, max(img.size) / 1000
 
 def cut_to_width(img, scale, box):
     """Cut a box (working-copy pixels) from the master, resize to WIDTH wide.

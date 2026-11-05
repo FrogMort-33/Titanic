@@ -8,6 +8,10 @@
 //    FlightSounds.engine()      the plane's propeller drone, until stopped
 //    FlightSounds.engineOff(s)  fade the drone away over s seconds
 //    FlightSounds.thunder()     a lightning CRACK, then a long rumble
+//    FlightSounds.scream()      "AAAH-ah-aaagh!" - our own made-up scream in
+//                               the style of the famous film scream (the real
+//                               recording is copyrighted, so we make our own)
+//    FlightSounds.boing()       a spring: "doy-oy-oy-oing"
 //
 //  HOW THUNDER IS MADE
 //    "Noise" is random numbers played as sound: it hisses like a TV
@@ -74,6 +78,72 @@ const FlightSounds = (() => {
       drone.a.stop(t + seconds + 0.1);
       drone.b.stop(t + seconds + 0.1);
       drone = null;
+    },
+
+    // ---- The scream --------------------------------------------------
+    // A voice is a buzz (sawtooth) shaped by the mouth. The mouth makes
+    // some pitches louder than others ("formants"); two "bandpass" filters
+    // do that job here, at the pitches that sound like "aaah".
+    // The pitch then goes: jump up, wobble, drop, jump again, fall away.
+    scream() {
+      wake();
+      const t = ctx.currentTime;
+      const voice = ctx.createOscillator();
+      voice.type = "sawtooth";
+      const f = voice.frequency;
+      f.setValueAtTime(420, t);
+      f.exponentialRampToValueAtTime(980, t + 0.08);    // AAAH
+      f.linearRampToValueAtTime(900, t + 0.42);
+      f.exponentialRampToValueAtTime(640, t + 0.55);    // -ah
+      f.exponentialRampToValueAtTime(880, t + 0.66);    // -AA
+      f.exponentialRampToValueAtTime(420, t + 1.15);    // -aaagh (falling away)
+
+      // Wobble (vibrato): a slow wave nudging the pitch up and down
+      const wobble = ctx.createOscillator(), depth = ctx.createGain();
+      wobble.frequency.value = 7; depth.gain.value = 25;
+      wobble.connect(depth).connect(f);
+
+      // The "mouth": two formant filters side by side
+      const mix = ctx.createGain();
+      for (const [pitch, q] of [[800, 6], [1250, 7]]) {
+        const formant = ctx.createBiquadFilter();
+        formant.type = "bandpass"; formant.frequency.value = pitch; formant.Q.value = q;
+        voice.connect(formant).connect(mix);
+      }
+      const vol = ctx.createGain();
+      vol.gain.setValueAtTime(0, t);
+      vol.gain.linearRampToValueAtTime(1.6, t + 0.05);
+      vol.gain.setValueAtTime(1.6, t + 0.45);
+      vol.gain.linearRampToValueAtTime(0.9, t + 0.55);
+      vol.gain.linearRampToValueAtTime(1.4, t + 0.66);
+      vol.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+      mix.connect(vol).connect(out);
+      voice.start(t); wobble.start(t);
+      voice.stop(t + 1.25); wobble.stop(t + 1.25);
+    },
+
+    // ---- The spring ----------------------------------------------------
+    // A soft note whose pitch wobbles fast at first, then slower and
+    // smaller, like a spring settling: "doy-oy-oy-oing".
+    boing() {
+      wake();
+      const t = ctx.currentTime;
+      const tone = ctx.createOscillator();
+      tone.type = "triangle";
+      tone.frequency.setValueAtTime(110, t);
+      tone.frequency.exponentialRampToValueAtTime(260, t + 0.12);  // up it goes
+      const wobble = ctx.createOscillator(), depth = ctx.createGain();
+      wobble.frequency.setValueAtTime(16, t);
+      wobble.frequency.linearRampToValueAtTime(7, t + 0.7);       // wobbles slow down
+      depth.gain.setValueAtTime(90, t);
+      depth.gain.exponentialRampToValueAtTime(5, t + 0.7);        // and get smaller
+      wobble.connect(depth).connect(tone.frequency);
+      const vol = ctx.createGain();
+      vol.gain.setValueAtTime(0.5, t);
+      vol.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+      tone.connect(vol).connect(out);
+      tone.start(t); wobble.start(t);
+      tone.stop(t + 0.8); wobble.stop(t + 0.8);
     },
 
     thunder() {
