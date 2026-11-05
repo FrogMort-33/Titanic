@@ -158,7 +158,10 @@
       this.at(TIMES.liftRoom, () => { this.cut(); this.showLift(); });
       this.at(TIMES.fadeOut, () => {
         this.cameras.main.fadeOut(2000, 0, 0, 0);
-        this.cameras.main.once("camerafadeoutcomplete", () => showEnd());  // in index.html / play-all.html
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+          if (window.PLAY_ALL) this.scene.start("van");     // "Play all": on to episode 7
+          else showEnd();                                   // in index.html
+        });
       });
     }
 
