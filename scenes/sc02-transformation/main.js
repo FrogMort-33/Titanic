@@ -285,7 +285,9 @@
         this.cameras.main.fadeOut(2500, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => {
           stopEndCrawl();                                // in index.html
-          showEnd();                                     // in index.html
+          // "Play all": straight on to scene 3. Otherwise: the end buttons.
+          if (window.PLAY_ALL) this.scene.start("flight");
+          else showEnd();                                // in index.html
         });
       });
     }
