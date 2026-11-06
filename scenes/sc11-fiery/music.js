@@ -11,6 +11,7 @@
 //    FierySounds.pastoralOff(s)   fade it away
 //    FierySounds.fire(secs, vol)  a roaring, crackling fire
 //    FierySounds.siren(secs)      a French "pin-pon" siren
+//    FierySounds.heartbeat(s, bpm) a heavy, racing heartbeat
 //    FierySounds.horror(secs)     the spooky 8-bit organ tune from episode 7
 //    FierySounds.horrorOff(s)     fade it away
 //    FierySounds.tada()           "ta-DA!" for the pop-up picture
@@ -595,6 +596,27 @@ const FierySounds = (() => {
       if (!horrorVol) return;
       horrorVol.gain.setValueAtTime(horrorVol.gain.value, ctx.currentTime);
       horrorVol.gain.linearRampToValueAtTime(0, ctx.currentTime + seconds);
+    },
+
+    // A heavy, racing HEARTBEAT: "lub-DUB, lub-DUB" (two low thumps),
+    // 'bpm' beats a minute, for 'seconds'
+    heartbeat(seconds = 6, bpm = 150) {
+      wake();
+      const thump = (when, vol, pitch) => {
+        const t = ctx.currentTime + when;
+        const o = ctx.createOscillator(); o.type = "sine";
+        o.frequency.setValueAtTime(pitch, t);
+        o.frequency.exponentialRampToValueAtTime(pitch * 0.5, t + 0.12);   // a falling "thud"
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(vol, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        o.connect(g).connect(out); o.start(t); o.stop(t + 0.2);
+      };
+      for (let x = 0; x < seconds; x += 60 / bpm) {
+        thump(x, 0.5, 90);           // lub
+        thump(x + 0.13, 0.65, 75);   // DUB
+      }
     },
   };
 })();

@@ -26,7 +26,31 @@
 //         Flames lick up the sides of the van all around her...
 //   48    ...her eyes follow something from left to right... she turns
 //         to look right, and shakes her head.
-//   56    Fade out.
+//   56    New screen: UP THE BURNING MOUNTAIN (IMG-067), with Enda in the
+//         corner (IMG-068): bopping, steering, sweating, eyes spinning,
+//         screaming. The fires flicker and spread across the mountain...
+//   57.5  ...the pink van comes in at the bottom and follows the road up,
+//         screaming all the way - a trail of HHHHH behind it, getting
+//         longer - and disappears over the first hill.
+//   62    "Meanwhile, Enda was totally fine."   Hold...
+//
+//   "IS THAT LE MAZEL?"  (IMG-069)
+//   69.5  New screen: the ruined house on the hill. The van (drawn facing
+//         left) comes in from the right and stops on the hill...
+//   74    "Is that Le Mazel?"
+//   76.5  "It's been 50 years, the forest fire got to it before we did"
+//   83    ...after a pause the van rolls on, BEHIND the house, off the left.
+//
+//   THE RANDOM EXCLAMATION SIGN  (IMG-070)
+//   90    The whole picture, just as it is. A heavy heart beats fast;
+//         Enda (right) bops, steers, sweats, eyes spinning. Hold 5...
+//
+//   THE FOREST ROAD FROM ABOVE  (IMG-071)
+//   96.5  Right: the road through the forest, from above. The pink van
+//         drives up it, in at the bottom and off the top - twice -
+//         screaming "AAAAAAAAH!" as it goes. Left: Tasha at her window
+//         again, looking from left to right.
+//  114    Fade out.
 //
 //  To change WHEN things happen, change the numbers in TIMES below.
 // =====================================================================
@@ -50,7 +74,23 @@
     smile: 40.5,          // ":)"
     tasha: 46,            // Tasha at her window, flames all around
     look: 48,             // she looks from left to right
-    fadeOut: 56,
+    mountain: 56,         // up the burning mountain
+    vanUp: 57.5,          // the van comes in at the bottom...
+    vanUpFor: 10,         // ...and takes this long to get over the first hill
+    meanwhile: 62,        // "Meanwhile, Enda was totally fine."
+    mazel: 69.5,          // the ruined house
+    mazelIn: 70,          // the van comes in from the right...
+    mazelStop: 73,        // ...and stops here
+    say1: 74,             // "Is that Le Mazel?"
+    say2: 76.5,           // "It's been 50 years..."
+    rollOn: 83,           // the van rolls on, behind the house...
+    rollGone: 89,         // ...and is off the left by now
+    sign: 90,             // the random exclamation sign
+    forest: 96.5,         // the forest road from above, and Tasha
+    passes: [98, 106],    // when the van starts each trip up the road
+    passFor: 5.5,         // how long each trip takes
+    tashaLook: 99,        // Tasha looks from left to right
+    fadeOut: 114,
   };
 
   const W = 1280, H = 900;          // size of the picture area
@@ -78,6 +118,12 @@
       const pic = (key, file) => this.load.image(key, packed[key] || "assets/" + file);
       for (const key of ["ff_later", "ff_hills", "ff_satnav", "ff_satnav2", "tw_window"]) pic(key, key + ".jpg");
       for (const key of ["tw_tasha1", "tw_tasha2"]) pic(key, key + ".png");
+      for (const key of ["um_mountain", "um_enda", "lm_scene", "xs_sign", "xs_enda", "fr_road"]) pic(key, key + ".jpg");
+      for (const key of ["fr_van", "fr_aah1", "fr_aah2"]) pic(key, key + ".png");
+      for (const key of ["lm_van", "lm_house", "lm_say1", "lm_say2a", "lm_say2b", "xs_mouth", "xs_wheel",
+                         "xs_eye_l", "xs_eye_r"]) pic(key, key + ".png");
+      for (const key of ["um_flame1", "um_flame2", "um_flame3", "um_van", "um_h", "um_mouth", "um_wheel",
+                         "um_eye_l", "um_eye_r", "um_meanwhile"]) pic(key, key + ".png");
       for (const key of ["ff_flame1", "ff_flame2", "ff_flame3", "ff_flame", "ff_bus", "ff_satnav_words", "ff_smile"])
         pic(key, key + ".png");
     }
@@ -137,6 +183,14 @@
       this.at(TIMES.satnav2, () => { this.cut(); this.showSatnav2(); });
       this.at(TIMES.tasha - 0.6, () => cam.fadeOut(500, 0, 0, 0));
       this.at(TIMES.tasha, () => { this.cut(); this.showTasha(); });
+      this.at(TIMES.mountain - 0.6, () => cam.fadeOut(500, 0, 0, 0));
+      this.at(TIMES.mountain, () => { this.cut(); this.showMountain(); });
+      this.at(TIMES.mazel - 0.6, () => { FierySounds.horrorOff(0.6); cam.fadeOut(500, 0, 0, 0); });
+      this.at(TIMES.mazel, () => { this.cut(); this.showMazel(); });
+      this.at(TIMES.sign - 0.6, () => cam.fadeOut(500, 0, 0, 0));
+      this.at(TIMES.sign, () => { this.cut(); this.showSign(); });
+      this.at(TIMES.forest - 0.5, () => cam.fadeOut(400, 0, 0, 0));
+      this.at(TIMES.forest, () => { this.cut(); this.showForest(); });
 
       // ---- the end ----
       this.at(TIMES.fadeOut, () => {
@@ -342,6 +396,253 @@
           // disbelief: a little shake of the head
           this.time.delayedCall(1200, () =>
             this.tweens.add({ targets: head2, angle: { from: -3, to: 3 }, duration: 160, yoyo: true, repeat: 7 }));
+        });
+      });
+    }
+
+    // A picture from layout.js with its middle as its handle (so it can
+    // turn or stretch round its middle) - it doesn't move
+    middled(key) {
+      const img = this.placed(key);
+      return img.setOrigin(0.5).setPosition(img.x + img.width / 2, img.y + img.height / 2);
+    }
+
+    // =====================================================================
+    //  UP THE BURNING MOUNTAIN, and screaming Enda
+    // =====================================================================
+    showMountain() {
+      const t0 = TIMES.mountain;                          // this part's start
+      const box = L.um_mountain;
+      this.placed("um_mountain");
+      const shape = this.make.graphics({ add: false });   // things only seen inside the picture
+      shape.fillStyle(0xffffff).fillRect(box.x, box.y, box.w, box.h);
+      const inside = shape.createGeometryMask();
+
+      // ---- the three drawn flames flicker ----
+      for (const [key, speed] of [["um_flame1", 240], ["um_flame2", 300], ["um_flame3", 270]]) {
+        const f = this.placed(key);
+        f.setOrigin(0.5, 1).setPosition(f.x + f.width / 2, f.y + f.height);
+        this.tweens.add({ targets: f, scaleY: 1.1, scaleX: 1.03, duration: speed, ease: "Sine.easeInOut",
+                          yoyo: true, repeat: -1 });
+      }
+      // ---- ...and the fire spreads: new flames spring up on the green,
+      //      one after another, bigger as time goes on ----
+      const spots = Phaser.Utils.Array.Shuffle(L.um_spots.slice());
+      let lit = 0;
+      this.loops.push(this.time.addEvent({ delay: 90, repeat: spots.length - 1, callback: () => {
+        const [x, y] = spots[lit++];
+        const size = 0.08 + Math.random() * 0.12 + lit / spots.length * 0.25;
+        const f = this.add.image(x, y, "ff_flame").setOrigin(0.5, 1).setScale(0).setMask(inside);
+        this.tweens.add({ targets: f, scale: size, duration: 500, ease: "Back.easeOut",
+          onComplete: () => this.tweens.add({ targets: f, scaleY: size * 1.2, duration: 160 + Math.random() * 200,
+                                              ease: "Sine.easeInOut", yoyo: true, repeat: -1 }) });
+      } }));
+
+      // ---- the pink van: up the road from the bottom, screaming, with a
+      //      trail of H's growing behind it ----
+      const road = L.um_road;
+      const lens = [0];                                   // how far along the road each point is
+      for (let i = 1; i < road.length; i++)
+        lens.push(lens[i - 1] + Math.hypot(road[i][0] - road[i - 1][0], road[i][1] - road[i - 1][1]));
+      const along = (d) => {                              // the point 'd' pixels along the road
+        let i = 1;
+        while (i < road.length - 1 && d > lens[i]) i++;
+        const f = Math.min(1, (d - lens[i - 1]) / (lens[i] - lens[i - 1]));
+        return [road[i - 1][0] + (road[i][0] - road[i - 1][0]) * f, road[i - 1][1] + (road[i][1] - road[i - 1][1]) * f];
+      };
+      this.at(TIMES.vanUp - t0, () => {
+        const van = this.add.image(0, 0, "um_van").setOrigin(0.5, 0.8).setMask(inside);
+        const trip = { d: 0 };
+        let lastH = -999;
+        this.tweens.add({ targets: trip, d: lens[lens.length - 1], duration: TIMES.vanUpFor * 1000,
+          ease: "Sine.easeIn",
+          onUpdate: () => {
+            const [x, y] = along(trip.d);
+            van.setPosition(x, y + Math.sin(trip.d / 6) * 1.5);      // a little bop
+            van.setScale(1.6 - 0.8 * trip.d / lens[lens.length - 1]); // smaller as it gets further away
+            // every 22 pixels of road, another "H" pops up behind it (to
+            // the right, like in the drawing), so the trail grows
+            if (trip.d - lastH > 38) {
+              lastH = trip.d;
+              const h = this.add.image(x + 45 + Math.random() * 35, y - 20 + Math.random() * 30, "um_h")
+                .setScale(0).setAngle(-15 + Math.random() * 30).setMask(inside);
+              this.tweens.add({ targets: h, scale: van.scale * 0.6, duration: 300, ease: "Back.easeOut" });
+              this.tweens.add({ targets: h, y: h.y - 4, duration: 200, yoyo: true, repeat: -1, delay: 300 });
+            }
+          },
+          // over the first hill... gone
+          onComplete: () => this.tweens.add({ targets: van, alpha: 0, scale: 0.3, duration: 400 }) });
+        // screaming, all the way
+        FierySounds.scream();
+        this.loops.push(this.time.addEvent({ delay: 1500, repeat: Math.floor(TIMES.vanUpFor / 1.5) - 1,
+                                             callback: () => FierySounds.scream() }));
+      });
+
+      // ---- Enda in the corner: bopping, steering, sweating, screaming ----
+      const enda = this.add.container(0, 0).setDepth(5);   // (in front of the flames)
+      enda.add(this.placed("um_enda"));
+      const mouth = this.placed("um_mouth");
+      mouth.setOrigin(0.5, 0.3).setPosition(mouth.x + mouth.width / 2, mouth.y + mouth.height * 0.3);
+      const wheel = this.middled("um_wheel");
+      const eyeL = this.middled("um_eye_l"), eyeR = this.middled("um_eye_r");
+      enda.add([mouth, wheel, eyeL, eyeR]);
+      this.tweens.add({ targets: enda, y: -8, duration: 230, ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+      this.tweens.add({ targets: wheel, angle: { from: -40, to: 40 }, duration: 500, ease: "Sine.easeInOut",
+                        yoyo: true, repeat: -1 });                         // yanking the wheel
+      this.tweens.add({ targets: [eyeL, eyeR], angle: 360, duration: 900, repeat: -1 });   // spinning eyes
+      this.tweens.add({ targets: mouth, scaleY: 1.12, scaleX: 1.04, duration: 120, yoyo: true, repeat: -1 });
+      // sweat drips off him, over and over
+      this.loops.push(this.time.addEvent({ delay: 350, loop: true, callback: () => {
+        const [dx, dy] = Phaser.Utils.Array.GetRandom(L.um_drops);
+        const drop = this.add.ellipse(dx, dy + enda.y, 10, 15, 0x5fc0dc).setStrokeStyle(1.5, 0x2a6f9a).setDepth(6);
+        this.tweens.add({ targets: drop, y: drop.y + 90, alpha: { from: 1, to: 0 }, duration: 1100,
+                          ease: "Quad.easeIn", onComplete: () => drop.destroy() });
+      } }));
+
+      // ---- "Meanwhile, Enda was totally fine." on a yellow card ----
+      this.at(TIMES.meanwhile - t0, () => {
+        const [cx, cy, cw, ch] = L.um_card;
+        const card = this.add.graphics().fillStyle(PAPER).fillRoundedRect(cx, cy, cw, ch, 14)
+          .lineStyle(3, 0x1c1a18).strokeRoundedRect(cx, cy, cw, ch, 14).setDepth(7);   // (in front of everything)
+        const words = this.placed("um_meanwhile").setDepth(8);
+        card.setAlpha(0); words.setAlpha(0);
+        this.tweens.add({ targets: [card, words], alpha: 1, duration: 1200 });
+      });
+    }
+
+    // =====================================================================
+    //  "IS THAT LE MAZEL?" - the ruined house
+    // =====================================================================
+    showMazel() {
+      const t0 = TIMES.mazel;                             // this part's start
+      const box = L.lm_scene;
+      this.placed("lm_scene");
+      const shape = this.make.graphics({ add: false });   // the van is only seen inside the picture
+      shape.fillStyle(0xffffff).fillRect(box.x, box.y, box.w, box.h);
+      const van = this.add.image(0, 0, "lm_van").setOrigin(0.5, 1).setMask(shape.createGeometryMask());
+      this.placed("lm_house");                            // the house goes on TOP, so the van passes behind it
+
+      // the van's road (from layout.js): roadY(x) gives the road's height
+      const road = L.lm_road;                             // (from right to left)
+      const roadY = (x) => {
+        let i = 1;
+        while (i < road.length - 1 && x < road[i][0]) i++;
+        const [ax, ay] = road[i - 1], [bx, by] = road[i];
+        return ay + (by - ay) * (x - ax) / (bx - ax);
+      };
+      const place = () => { van.y = roadY(van.x) + Math.sin(van.x / 9) * 2; };   // on the road, bopping
+      van.x = box.x + box.w + van.width;                 // off the right-hand side
+      place();
+      // in from the right... and stop
+      this.at(TIMES.mazelIn - t0, () => {
+        FierySounds.engine(TIMES.rollGone - TIMES.mazelIn);
+        this.tweens.add({ targets: van, x: L.lm_stop, duration: (TIMES.mazelStop - TIMES.mazelIn) * 1000,
+                          ease: "Quad.easeOut", onUpdate: place });
+      });
+      // the words, written in left to right as they're said
+      const say = (key, secs, pitch) => {
+        const words = this.placed(key);
+        const shown = { w: 0 };
+        words.setCrop(0, 0, 0, words.height);
+        this.tweens.add({ targets: shown, w: words.width, duration: secs * 1000,
+                          onUpdate: () => words.setCrop(0, 0, shown.w, words.height) });
+        FierySounds.chatter(secs, pitch);
+      };
+      this.at(TIMES.say1 - t0, () => say("lm_say1", 1.8, 1.2));
+      this.at(TIMES.say2 - t0, () => {
+        say("lm_say2a", 2.4, 0.9);
+        this.time.delayedCall(2500, () => say("lm_say2b", 1.6, 0.9));
+      });
+      // after a pause, it rolls on - behind the house - and off the left
+      this.at(TIMES.rollOn - t0, () => {
+        this.tweens.add({ targets: van, x: box.x - van.width, duration: (TIMES.rollGone - TIMES.rollOn) * 1000,
+                          ease: "Sine.easeIn", onUpdate: place });
+      });
+    }
+
+    // =====================================================================
+    //  THE RANDOM EXCLAMATION SIGN - just the picture, a racing heart, and
+    //  Enda (right) in a state
+    // =====================================================================
+    showSign() {
+      this.placed("xs_sign");
+      FierySounds.engineOff(0.5);
+      FierySounds.heartbeat(TIMES.fadeOut - TIMES.sign + 2.5, 150);
+      // Enda's picture, with his moving parts, all bopping together
+      const enda = this.add.container(0, 0);
+      enda.add(this.add.image(L.xs_enda_img.x, L.xs_enda_img.y, "xs_enda").setOrigin(0));
+      const mouth = this.placed("xs_mouth");
+      mouth.setOrigin(0.5, 0.3).setPosition(mouth.x + mouth.width / 2, mouth.y + mouth.height * 0.3);
+      const wheel = this.middled("xs_wheel");
+      const eyeL = this.middled("xs_eye_l"), eyeR = this.middled("xs_eye_r");
+      enda.add([mouth, wheel, eyeL, eyeR]);
+      this.tweens.add({ targets: enda, y: -6, duration: 200, ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+      this.tweens.add({ targets: wheel, angle: { from: -40, to: 40 }, duration: 450, ease: "Sine.easeInOut",
+                        yoyo: true, repeat: -1 });
+      this.tweens.add({ targets: [eyeL, eyeR], angle: 360, duration: 800, repeat: -1 });
+      this.tweens.add({ targets: mouth, scaleY: 1.1, scaleX: 1.04, duration: 130, yoyo: true, repeat: -1 });
+      // sweat
+      this.loops.push(this.time.addEvent({ delay: 300, loop: true, callback: () => {
+        const [dx, dy] = Phaser.Utils.Array.GetRandom(L.xs_drops);
+        const drop = this.add.ellipse(dx, dy + enda.y, 11, 16, 0x5fc0dc).setStrokeStyle(1.5, 0x2a6f9a);
+        this.tweens.add({ targets: drop, y: drop.y + 90, alpha: { from: 1, to: 0 }, duration: 1000,
+                          ease: "Quad.easeIn", onComplete: () => drop.destroy() });
+      } }));
+    }
+
+    // =====================================================================
+    //  THE FOREST ROAD FROM ABOVE (right), and Tasha at her window (left)
+    // =====================================================================
+    showForest() {
+      const t0 = TIMES.forest;                            // this part's start
+      const box = L.fr_road;
+      this.placed("fr_road");
+      const shape = this.make.graphics({ add: false });   // the van is only seen inside the picture
+      shape.fillStyle(0xffffff).fillRect(box.x, box.y, box.w, box.h);
+      const inside = shape.createGeometryMask();
+
+      // ---- Tasha's window (the same pictures as before), made smaller and
+      //      put on the left: everything goes in a "container" that is
+      //      shrunk to 60% ----
+      const k = 0.6;
+      const tasha = this.add.container(20 - L.tw_window.x * k, (H - L.tw_window.h * k) / 2 - L.tw_window.y * k)
+        .setScale(k);
+      const head1 = this.placed("tw_tasha1");
+      const head2 = this.placed("tw_tasha2").setAlpha(0);
+      tasha.add([this.placed("tw_window"), head1, head2]);
+      const h0 = head1.x, x2 = head2.x;
+      head1.x -= 50;                                      // looking LEFT first...
+      this.at(TIMES.tashaLook - t0, () => {
+        this.tweens.add({ targets: head1, x: h0 + 20, duration: 1800, ease: "Sine.easeInOut" });   // ...then right
+        this.time.delayedCall(1300, () => {
+          head2.x = x2 - 20;
+          this.tweens.add({ targets: head2, alpha: 1, x: x2 + 20, duration: 700, ease: "Sine.easeOut" });
+          this.tweens.add({ targets: head1, alpha: 0, duration: 500 });
+          this.time.delayedCall(1200, () =>
+            this.tweens.add({ targets: head2, angle: { from: -3, to: 3 }, duration: 160, yoyo: true, repeat: 7 }));
+        });
+      });
+
+      // ---- the van: in at the bottom, up the road and off the top,
+      //      screaming as it goes ----
+      const vx = L.fr_van.x + this.textures.get("fr_van").getSourceImage().width / 2;
+      const van = this.add.image(vx, box.y + box.h + 200, "fr_van").setMask(inside);
+      TIMES.passes.forEach((start) => {
+        this.at(start - t0, () => {
+          van.y = box.y + box.h + van.height / 2;           // just below the picture
+          this.tweens.add({ targets: van, y: box.y - van.height / 2, duration: TIMES.passFor * 1000 });
+          this.tweens.add({ targets: van, x: vx + 4, duration: 120, yoyo: true, repeat: TIMES.passFor * 4 });  // a judder
+          FierySounds.engine(TIMES.passFor);
+          // AAAAAAAAH! - each scream pops up beside the van as it goes past
+          [["fr_aah2", 0.25, 1.1], ["fr_aah1", 0.55, 0.9]].forEach(([key, when, pitch]) => {
+            this.time.delayedCall(when * TIMES.passFor * 1000, () => {
+              FierySounds.scream();
+              const aah = this.placed(key).setAlpha(0);
+              this.tweens.add({ targets: aah, alpha: 1, duration: 150 });
+              this.tweens.add({ targets: aah, x: aah.x + 3, duration: 60, yoyo: true, repeat: 12 });   // shaking
+              this.tweens.add({ targets: aah, alpha: 0, delay: 1800, duration: 500, onComplete: () => aah.destroy() });
+            });
+          });
         });
       });
     }
