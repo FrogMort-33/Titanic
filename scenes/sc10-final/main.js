@@ -47,7 +47,17 @@
 //         comes in on the left...
 //  102    ...then, from the left, our van SPEEDS across (the Valkyries)...
 //  105.5  ...and is gone. Hold...
-//  109    Fade out.
+//
+//   PART 4 - "WE'LL ALL GET DVT!"  (IMG-061)  - the happy country tune
+//  109    New screen. Top: inside the van, four potatoes. Bottom: the van
+//         bopping along the road towards "LE SERVICES 100,000 m".
+//  110.5  Rosie: "We'll all get DVT!"   (hold)
+//  115    Enda: "My foot will be frozen on the accelerator!"
+//  121    The top picture changes to the next little panel...
+//  122    ...Annelisa: "Do you need a break? After all the running people
+//         over, bashing the car up?..."
+//  ~128   The van bops off the right of the road picture. Hold...
+//  132    Fade out.
 //
 //  To change WHEN things happen, change the numbers in TIMES below.
 //  To change how FAST the vehicles go, change SPEED below.
@@ -86,7 +96,17 @@
     convoy: 92,           // the stream of lorries
     zoom: 102,            // our van speeds across...
     zoomGone: 105.5,      // ...and is off the right-hand side by now
-    fadeOut: 109,
+    // PART 4 - "We'll all get DVT!"
+    dvt: 109,             // new screen: inside the van + the road
+    rosie: 110.5,         // Rosie: "We'll all get DVT!"
+    rosieFor: 2.5,
+    enda: 115,            // Enda: "My foot will be frozen on the accelerator!"
+    endaFor: 3.5,
+    ann: 121,             // the next little panel...
+    annTalk: 122,         // ...Annelisa: "Do you need a break? ..."
+    annFor: 4.5,
+    vanGone: 128,         // the van is off the right of the road picture by now
+    fadeOut: 132,
   };
 
   const SPEED = {         // in screen pixels per second, along the road
@@ -139,6 +159,10 @@
       pic("fd_road", "fd_road.jpg");
       for (const key of ["tb_later", "tb_booth", "tb_inside", "tb_frame1", "tb_frame2", "tb_frame3"]) pic(key, key + ".jpg");
       pic("et_town", "et_town.jpg");
+      for (const key of ["sv_four", "sv_two", "sv_road"]) pic(key, key + ".jpg");
+      for (const key of ["sv_mouth_rosie", "sv_mouth_enda", "sv_wheel_a", "sv_dvt", "sv_foot", "sv_mouth_ann",
+                         "sv_wheel_b", "sv_break", "sv_van"])
+        pic(key, key + ".png");
       for (const key of ["et_pink", "et_blue", "et_red", "fd_bus"]) pic(key, key + ".png");
       for (const key of ["tb_arm", "tb_ticket", "tb_hand", "tb_van", "tb_mouth_mid", "tb_mouth_enda", "tb_wheel_iv",
                          "tb_strict", "tb_ohshit", "tb_delirious", "tb_mouth_q", "tb_wheel_1", "tb_say_q", "tb_mouth_r",
@@ -285,6 +309,8 @@
       this.at(TIMES.rhianna, () => { this.cut(); this.showFrames(); });
       this.at(TIMES.convoy - 0.6, () => cam.fadeOut(500, 0, 0, 0));
       this.at(TIMES.convoy, () => { this.cut(); this.showConvoy(); });
+      this.at(TIMES.dvt - 0.8, () => { FinalSounds.valkyriesOff(0.8); cam.fadeOut(700, 0, 0, 0); });
+      this.at(TIMES.dvt, () => { this.cut(); this.showServices(); });
 
       // ---- the end ----
       this.at(TIMES.fadeOut, () => {
@@ -642,7 +668,7 @@
       // ---- our van SPEEDS across, in front, left to right ----
       this.at(TIMES.zoom - t0, () => {
         FinalSounds.pastoralOff(1);
-        FinalSounds.valkyries(TIMES.fadeOut - TIMES.zoom + 2);
+        FinalSounds.valkyries(TIMES.dvt - TIMES.zoom + 1);
         const bus = this.add.image(box.x - 300, lane + 40, "fd_bus").setOrigin(0.5, 1).setScale(0.5).setMask(inside);
         this.bus = bus;
         this.tweens.add({ targets: bus, x: box.x + box.w + 300, duration: (TIMES.zoomGone - TIMES.zoom) * 1000,
@@ -658,6 +684,80 @@
         } });
         this.loops.push(dust);
         this.at(TIMES.zoomGone - TIMES.zoom + 0.3, () => dust.remove());
+      });
+    }
+
+    // =====================================================================
+    //  PART 4 - "WE'LL ALL GET DVT!": inside the van (top half of the
+    //  screen) and the van on the road (bottom half)
+    // =====================================================================
+
+    // A mouth, ready to talk: its handle is near its top (so it opens
+    // DOWNWARDS) and it sits exactly where it was drawn
+    mouthAt(key) {
+      const m = this.placed(key);
+      return m.setOrigin(0.5, 0.3).setPosition(m.x + m.width / 2, m.y + m.height * 0.3);
+    }
+
+    // Words that write themselves in, top line first, over 'secs'
+    // ("setCrop" shows just the top part of a picture, and we let more and
+    //  more of it show)
+    writeIn(key, secs) {
+      const words = this.placed(key);
+      const shown = { h: 0 };
+      words.setCrop(0, 0, words.width, 0);
+      this.tweens.add({ targets: shown, h: words.height, duration: secs * 1000,
+                        onUpdate: () => words.setCrop(0, 0, words.width, shown.h) });
+      return words;
+    }
+
+    showServices() {
+      const t0 = TIMES.dvt;                               // this part's start
+      FinalSounds.pastoral(TIMES.fadeOut - t0 + 3);       // happy and carefree
+
+      // ---- BOTTOM: the road, and our van bopping along it ----
+      const road = L.sv_road;
+      this.placed("sv_road");
+      const shape = this.make.graphics({ add: false });   // the van is only seen inside the picture
+      shape.fillStyle(0xffffff).fillRect(road.x, road.y, road.w, road.h);
+      const van = this.placed("sv_van").setMask(shape.createGeometryMask());
+      // bop: a little hop up and down, over and over...
+      this.tweens.add({ targets: van, y: van.y - 4, duration: 260, ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+      // ...while it trundles to the right, and off the end of the picture
+      this.tweens.add({ targets: van, x: road.x + road.w + 10, duration: (TIMES.vanGone - t0) * 1000,
+                        ease: "Sine.easeIn" });
+
+      // ---- TOP: inside the van, the four potatoes. Everything in one
+      //      "container" so the whole picture bops along together ----
+      let panel = this.add.container(0, 0);
+      const rosie = this.mouthAt("sv_mouth_rosie"), enda = this.mouthAt("sv_mouth_enda");
+      panel.add([this.placed("sv_four"), rosie, enda, this.steer("sv_wheel_a")]);
+      this.tweens.add({ targets: panel, y: -5, duration: 420, ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+
+      // Rosie: "We'll all get DVT!"
+      this.at(TIMES.rosie - t0, () => {
+        panel.add(this.pop("sv_dvt"));
+        this.talk(rosie, TIMES.rosieFor, 1.3);
+      });
+      // Enda: "My foot will be frozen on the accelerator!" (it writes in as he says it)
+      this.at(TIMES.enda - t0, () => {
+        panel.add(this.writeIn("sv_foot", TIMES.endaFor));
+        this.talk(enda, TIMES.endaFor, 0.8);
+      });
+
+      // ---- the next little panel: Annelisa and Enda ----
+      this.at(TIMES.ann - t0, () => {
+        this.cameras.main.flash(200, 255, 255, 255);
+        panel.destroy();                                  // (takes everything in it too)
+        panel = this.add.container(0, 0);
+        const ann = this.mouthAt("sv_mouth_ann");
+        panel.add([this.placed("sv_two"), ann, this.steer("sv_wheel_b")]);
+        this.tweens.add({ targets: panel, y: -5, duration: 420, ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+        // "Do you need a break? After all the running people over, bashing the car up?..."
+        this.at(TIMES.annTalk - TIMES.ann, () => {
+          panel.add(this.writeIn("sv_break", TIMES.annFor));
+          this.talk(ann, TIMES.annFor, 1.1);
+        });
       });
     }
   }

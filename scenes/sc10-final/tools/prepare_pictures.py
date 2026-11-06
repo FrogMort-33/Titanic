@@ -441,6 +441,85 @@ ets.place("et_town", 0, 0)
 layout["et_town"]["w"], layout["et_town"]["h"] = town.size
 print("et_town.jpg", town.size)
 
+# =====================================================================
+#  PART 4: "WE'LL ALL GET DVT!" (IMG-061, master 22_1.jpg, turned 90)
+#  Top half of the screen: inside the van. First the four potatoes
+#  (Rosie: "We'll all get DVT!", Enda: "My foot will be frozen on the
+#  accelerator!"), then the next little panel (Annelisa: "Do you need a
+#  break? ..."). Bottom half: the van on the road and the services sign.
+#  All the words are lifted off, so they can appear as each one speaks.
+# =====================================================================
+TOP_H = 520                      # the top half (inside the van)
+
+def flat_paper(p, hole, grow_by=7):
+    """Paint over 'hole' AND any yellow page showing round the panel with
+    the panel's own white paper. The colour is smudged in from PLAIN white
+    paper only (never the yellow page or the drawing), then blurred a lot
+    so it follows the photo's gentle light and shade, plus a little grain."""
+    r, g, b = p.rgb[..., 0], p.rgb[..., 1], p.rgb[..., 2]
+    yellow = ((g - b) > 28) & ((r - g) < 15) & (p.ink < 40)   # the book's yellow page (faces are peach: redder)
+    yellow = grow(yellow * 255.0, 5) > 10
+    mask = np.maximum(grow(hole, grow_by), yellow * 255.0)
+    plain = (mask < 10) & (p.ink < 20) & ((p.rgb.max(axis=2) - p.rgb.min(axis=2)) < 30)
+    fill = fill_holes(p.rgb, plain.astype(np.float32))
+    fill = np.asarray(Image.fromarray(np.clip(fill, 0, 255).astype(np.uint8))
+                      .filter(ImageFilter.GaussianBlur(14)), np.float32)
+    fill = fill + rng.normal(0, 2.5, p.rgb.shape[:2])[..., None]
+    soft = np.asarray(Image.fromarray(np.clip(mask, 0, 255).astype(np.uint8))
+                      .filter(ImageFilter.GaussianBlur(2)), np.float32)[..., None] / 255
+    return Image.fromarray(np.clip(p.rgb * (1 - soft) + fill * soft, 0, 255).astype(np.uint8))
+
+# ---- the four potatoes ----
+fp = Picture("22_1.jpg", 90, (150, 80, 440, 234), W - 40, TOP_H - 20, at_y=10)
+round_patch(fp, "sv_mouth_rosie", (189, 141, 212, 156))
+round_patch(fp, "sv_mouth_enda", (314, 199, 331, 210))
+disc_patch(fp, "sv_wheel_a", (322, 215), 6)
+fp.words("sv_dvt", (230, 101, 306, 150), INKC)            # "We'll all get DVT!"
+fp.words("sv_foot", (345, 113, 440, 196), INKC)           # "My foot will be frozen on the accelerator!"
+# (the "M" pokes left past the seat's edge, so the box starts further left;
+#  then the seat's edge, which comes along below the "My", is wiped off)
+foot = Image.open(OUT / "sv_foot.png")
+fa = np.asarray(foot.getchannel("A")).copy()
+fa[round((148 - 113) * fp.zoom):, :round((360 - 345) * fp.zoom)] = 0   # the seat's edge
+fa[:, :round(2 * fp.zoom)] = 0                                          # the speech tick's tip
+foot.putalpha(Image.fromarray(fa)); foot.save(OUT / "sv_foot.png")
+# rub out the words (the seat's edge is just left of "My foot") and the
+# corner of the next panel, which pokes into this one
+hole = box_hole(fp, (228, 99, 308, 152))                            # "We'll all get DVT!"
+fb = fp.pbox((345, 113, 440, 196))                                   # "My foot...": just its ink,
+hole[fb[1]:fb[3], fb[0]:fb[2]] = np.maximum(hole[fb[1]:fb[3], fb[0]:fb[2]],   # so the seat's edge stays
+                                            grow(fa.astype(np.float32), 9))
+hole = np.maximum(hole, box_hole(fp, (345, 201, 440, 234)))
+hole = np.maximum(hole, box_hole(fp, (336, 128, 351, 148)))        # the little speech tick
+four = flat_paper(fp, hole)
+four.save(OUT / "sv_four.jpg", quality=90); fp.place("sv_four", 0, 0)
+layout["sv_four"]["w"], layout["sv_four"]["h"] = four.size
+print("sv_four.jpg", four.size)
+
+# ---- the next little panel: Annelisa and Enda ----
+ap = Picture("22_1.jpg", 90, (345, 202, 655, 407), W - 40, TOP_H - 20, at_y=10)
+round_patch(ap, "sv_mouth_ann", (428, 352, 472, 376))
+disc_patch(ap, "sv_wheel_b", (581, 397), 11)
+ap.words("sv_break", (350, 206, 640, 274), INKC)           # "Do you need a break? ..."
+two = flat_paper(ap, box_hole(ap, (348, 204, 642, 276)), 3)
+two.save(OUT / "sv_two.jpg", quality=90); ap.place("sv_two", 0, 0)
+layout["sv_two"]["w"], layout["sv_two"]["h"] = two.size
+print("sv_two.jpg", two.size)
+
+# ---- the road, the van and LE SERVICES 100,000 m ----
+rp = Picture("22_1.jpg", 90, (131, 415, 400, 560), 700, H - TOP_H - 30, at_y=TOP_H + 15)
+SVAN = [(137, 509), (196, 507), (196, 502), (219, 502), (219, 548), (214, 558), (197, 560),
+        (186, 556), (160, 556), (152, 560), (143, 558), (137, 548)]
+rp.solid("sv_van", (135, 500, 221, 562), SVAN)
+# behind the van: plain road, mended with crayon texture from the empty road
+road_hole = grow(rp.hole, 9)
+road_hole = np.maximum(road_hole, box_hole(rp, (131, 538, 141, 548)))   # the exhaust puffs
+rp.rgb = np.asarray(mend(rp, road_hole, (240, 505, 330, 550), 20), np.float32)
+road = Image.fromarray(rp.rgb.astype(np.uint8))
+road.save(OUT / "sv_road.jpg", quality=90); rp.place("sv_road", 0, 0)
+layout["sv_road"]["w"], layout["sv_road"]["h"] = road.size
+print("sv_road.jpg", road.size)
+
 (SCENE / "layout.js").write_text(
     "// Made by tools/prepare_pictures.py - do not edit by hand.\n"
     "window.LAYOUT10 = " + json.dumps(layout, indent=1) + ";\n")
