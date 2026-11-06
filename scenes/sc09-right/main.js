@@ -223,7 +223,10 @@
       this.at(TIMES.fadeOut, () => {
         RightSounds.valkyriesOff(2.5);
         this.cameras.main.fadeOut(2500, 0, 0, 0);
-        this.cameras.main.once("camerafadeoutcomplete", () => showEnd());  // in index.html / play-all.html
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+          if (window.PLAY_ALL) this.scene.start("final");      // "Play all": on to episode 10
+          else showEnd();                                       // in index.html
+        });
       });
     }
 
