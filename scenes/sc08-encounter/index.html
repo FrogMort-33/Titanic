@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A Close Encounter</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
+                 font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif; }
+    #stage { position: relative; width: 100%; height: 100%; }
+
+    /* ---- Buttons (same look as the other scenes) ---- */
+    .button { position: absolute; z-index: 3; left: 50%; top: 50%; transform: translate(-50%, -50%);
+              font: inherit; font-size: 28px; padding: 18px 40px; cursor: pointer;
+              background: #ffe81f; color: #000; border: 4px solid #000; border-radius: 6px; }
+    .button[hidden] { display: none; }
+    .small { position: absolute; z-index: 3; right: 16px; top: 16px; font-size: 16px; padding: 8px 14px;
+             background: #222; color: #fff; border: 1px solid #666; border-radius: 6px; cursor: pointer; }
+    .note { position: absolute; z-index: 3; left: 0; right: 0; bottom: 24px; text-align: center;
+            color: #bbb; font-family: Arial, sans-serif; font-size: 14px; }
+
+    /* The end: two buttons side by side in the middle */
+    #end { position: absolute; z-index: 3; inset: 0; display: flex; gap: 20px;
+           align-items: center; justify-content: center; flex-wrap: wrap; }
+    #end[hidden] { display: none; }
+    #end .button { position: static; transform: none; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <button class="button" id="play">&#9654; Play</button>
+    <!-- Quick test: hear the birds -->
+    <button class="small" id="thunder">&#128038; Birds only</button>
+    <div class="note" id="note">Sound on (on iPad, check the silent switch)</div>
+
+    <div id="end" hidden>
+      <a class="button" href="../sc07-van/index.html">&#9664; Episode 7</a>
+      <button class="button" id="replay">&#8635; Replay</button>
+    </div>
+  </div>
+
+  <!-- Phaser kept locally, pictures packed as text, sprite positions, then our code -->
+  <script src="lib/phaser.min.js"></script>
+  <script src="assets.js"></script>
+  <script src="layout.js"></script>
+  <script src="music.js"></script>
+  <script src="main.js"></script>
+
+  <script>
+    // Called from main.js when the scene has finished.
+    function showEnd() { document.getElementById("end").hidden = false; }
+
+    // Play: sound may only start from a tap, so the tap starts everything.
+    document.getElementById("play").addEventListener("click", (e) => {
+      e.target.hidden = true;
+      document.getElementById("thunder").hidden = true;
+      document.getElementById("note").hidden = true;
+      window.startShow();
+    });
+
+    document.getElementById("thunder").addEventListener("click", () => CountrySounds.chirp());
+
+    // Replay: simplest is to reload the page and start again.
+    document.getElementById("replay").addEventListener("click", () => location.reload());
+  </script>
+</body>
+</html>
