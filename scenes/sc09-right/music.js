@@ -32,6 +32,14 @@
 //                                 (p = pitch: 1 is normal, higher is squeakier)
 //    RightSounds.haha()           "HA HA HA HA!" - the van laughing
 //
+//   MEANWHILE... THE GREEN CAR
+//    RightSounds.screech()        tyres squealing as the green car swerves
+//    RightSounds.wilhelm(p)       "AAAH-ah-aaagh!" our own made-up scream in the
+//                                 style of the famous film scream (the same one
+//                                 as episode 3); p = pitch, so each potato differs
+//    RightSounds.squeeze()        a squeaky creak (Joe squeezing his bag)
+//    RightSounds.sadTrombone()    "wah wah wah waaaah" for the bag's R.I.P.
+//
 //  (Called "RightSounds" so it can share a page with the other
 //   episodes' sounds on the "Play all" page.)
 // =====================================================================
@@ -383,6 +391,98 @@ const RightSounds = (() => {
         g.gain.setValueAtTime(0.07, t);
         g.gain.linearRampToValueAtTime(0, t + 0.16);
         o.connect(g).connect(out); o.start(t); o.stop(t + 0.18);
+      });
+    },
+
+    // Tyres squealing: a high wobbly whistle, made rough with a filter
+    screech() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "sawtooth";
+      o.frequency.setValueAtTime(1500, t);
+      o.frequency.linearRampToValueAtTime(1100, t + 0.9);
+      const wob = ctx.createOscillator(), depth = ctx.createGain();
+      wob.frequency.value = 30; depth.gain.value = 120;
+      wob.connect(depth).connect(o.frequency);
+      const band = ctx.createBiquadFilter(); band.type = "bandpass"; band.frequency.value = 1300; band.Q.value = 3;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.12, t + 0.05);
+      g.gain.linearRampToValueAtTime(0, t + 0.95);
+      o.connect(band).connect(g).connect(out);
+      o.start(t); wob.start(t); o.stop(t + 1); wob.stop(t + 1);
+    },
+
+    // The film-style scream (copied from episode 3), with a pitch knob.
+    // A voice is a buzz (sawtooth) shaped by the mouth: two "bandpass"
+    // filters make the "aaah" sound. The pitch jumps up, wobbles, drops,
+    // jumps again, then falls away.
+    wilhelm(pitch = 1) {
+      wake();
+      const t = ctx.currentTime;
+      const voice = ctx.createOscillator();
+      voice.type = "sawtooth";
+      const f = voice.frequency;
+      f.setValueAtTime(420 * pitch, t);
+      f.exponentialRampToValueAtTime(980 * pitch, t + 0.08);    // AAAH
+      f.linearRampToValueAtTime(900 * pitch, t + 0.42);
+      f.exponentialRampToValueAtTime(640 * pitch, t + 0.55);    // -ah
+      f.exponentialRampToValueAtTime(880 * pitch, t + 0.66);    // -AA
+      f.exponentialRampToValueAtTime(420 * pitch, t + 1.15);    // -aaagh
+      const wobble = ctx.createOscillator(), depth = ctx.createGain();
+      wobble.frequency.value = 7; depth.gain.value = 25;
+      wobble.connect(depth).connect(f);
+      const mix = ctx.createGain();
+      for (const [formant, q] of [[800, 6], [1250, 7]]) {
+        const bp = ctx.createBiquadFilter();
+        bp.type = "bandpass"; bp.frequency.value = formant * Math.sqrt(pitch); bp.Q.value = q;
+        voice.connect(bp).connect(mix);
+      }
+      const vol = ctx.createGain();
+      vol.gain.setValueAtTime(0, t);
+      vol.gain.linearRampToValueAtTime(1.3, t + 0.05);
+      vol.gain.setValueAtTime(1.3, t + 0.45);
+      vol.gain.linearRampToValueAtTime(0.7, t + 0.55);
+      vol.gain.linearRampToValueAtTime(1.1, t + 0.66);
+      vol.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+      mix.connect(vol).connect(out);
+      voice.start(t); wobble.start(t);
+      voice.stop(t + 1.25); wobble.stop(t + 1.25);
+    },
+
+    // A squeaky creak: a quick wobbly note sliding up
+    squeeze() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "triangle";
+      o.frequency.setValueAtTime(500 + Math.random() * 150, t);
+      o.frequency.linearRampToValueAtTime(900, t + 0.25);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.06, t);
+      g.gain.linearRampToValueAtTime(0, t + 0.28);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.3);
+    },
+
+    // "wah wah wah waaaah": four sad notes going down, the last one wobbles
+    sadTrombone() {
+      wake();
+      [[311, 0, 0.45], [294, 0.5, 0.45], [277, 1.0, 0.45], [262, 1.5, 1.4]].forEach(([f, when, len], i) => {
+        const t = ctx.currentTime + when;
+        const o = ctx.createOscillator(); o.type = "sawtooth";
+        o.frequency.setValueAtTime(f * 1.03, t);
+        o.frequency.linearRampToValueAtTime(f, t + 0.1);
+        if (i === 3) {                                          // the last note wobbles
+          const wob = ctx.createOscillator(), depth = ctx.createGain();
+          wob.frequency.value = 5; depth.gain.value = 8;
+          wob.connect(depth).connect(o.frequency); wob.start(t); wob.stop(t + len);
+        }
+        const low = ctx.createBiquadFilter(); low.type = "lowpass"; low.frequency.value = 900;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.12, t + 0.05);
+        g.gain.setValueAtTime(0.12, t + len - 0.1);
+        g.gain.linearRampToValueAtTime(0, t + len);
+        o.connect(low).connect(g).connect(out); o.start(t); o.stop(t + len + 0.02);
       });
     },
 

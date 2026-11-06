@@ -619,6 +619,147 @@ ha.place("nv_laugh", 0, 0)
 layout["nv_laugh"]["w"], layout["nv_laugh"]["h"] = fixed.size
 print("nv_laugh.jpg", fixed.size)
 
+# =====================================================================
+#  PANEL 8: "MEANWHILE" - THE GREEN CAR CUTS UP THE VAN
+#  (IMG-051 the green potatoes and the motorway, IMG-052 everyone
+#   screaming, IMG-053 Joe's bag and worried Enda, IMG-054 Tasha at
+#   her window - masters 19_1..19_4)
+# =====================================================================
+def patch_out(pic, hole, name):
+    """Rub out everything in 'hole' (smudging in the paper or crayon
+    colour from around it), and save the picture as a jpg."""
+    big = grow(hole, 9)
+    soft = np.asarray(Image.fromarray(np.clip(big, 0, 255).astype(np.uint8))
+                      .filter(ImageFilter.GaussianBlur(2)), np.float32)[..., None] / 255
+    # the colour to fill with: smudged in ONLY from clean bits outside the hole
+    good = ((grow(big, 9) < 10) & (pic.ink < 30)).astype(np.float32)
+    fill = fill_holes(pic.rgb, good)
+    fill = np.asarray(Image.fromarray(np.clip(fill, 0, 255).astype(np.uint8))
+                      .filter(ImageFilter.GaussianBlur(5)), np.float32)
+    fill = fill + rng.normal(0, 2.5, fill.shape[:2])[..., None]           # paper grain
+    clean = Image.fromarray(np.clip(pic.rgb * (1 - soft) + fill * soft, 0, 255).astype(np.uint8))
+    clean.save(OUT / (name + ".jpg"), quality=90)
+    pic.place(name, 0, 0)
+    layout[name]["w"], layout[name]["h"] = clean.size
+    print(name + ".jpg", clean.size)
+    return clean
+
+def cut_polys(pic, name, outlines):
+    """Like cut_seat, but the outline can be several pieces"""
+    a = np.zeros_like(pic.ink)
+    for o in outlines:
+        a = np.maximum(a, polygon_mask(pic.img.size, [pic.pt(x, y) for x, y in o], 1.0))
+    ys, xs = np.nonzero(a > 10)
+    b = (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)
+    save_png(name, pic.img.crop(b), a[b[1]:b[3], b[0]:b[2]])
+    pic.place(name, b[0], b[1])
+    pic.hole = np.maximum(pic.hole, a)
+
+def disc(pic, name, centre, r):
+    """A round patch that can spin in place (eyes, a steering wheel)"""
+    b = pic.pbox((centre[0] - r, centre[1] - r, centre[0] + r, centre[1] + r))
+    m = Image.new("L", (b[2] - b[0], b[3] - b[1]), 0)
+    ImageDraw.Draw(m).ellipse((1, 1, m.width - 2, m.height - 2), fill=255)
+    save_png(name, pic.img.crop(b), np.asarray(m.filter(ImageFilter.GaussianBlur(1)), np.float32))
+    pic.place(name, b[0], b[1])
+
+# ---- 1. "Meanwhile", and the two mini panels (IMG-051) ----
+mw = Picture("19_1.jpg", 0, (212, 115, 725, 218), 430, 80, at_y=6)
+mw.words("gc_meanwhile", (212, 115, 725, 218), INKC)
+ROW_Y, ROW_H = 92, 350
+gl = Picture("19_1.jpg", 0, (62, 252, 418, 622), 400, ROW_H, at_x=290, at_y=ROW_Y)
+cut_polys(gl, "gc_madam", [[(72, 520), (95, 470), (100, 400), (120, 362), (165, 352), (205, 362), (235, 392),
+                            (250, 420), (252, 445), (242, 470), (242, 530), (226, 566), (202, 588), (112, 588),
+                            (96, 562), (88, 538), (72, 538)]])          # the passenger
+cut_polys(gl, "gc_driver", [[(278, 450), (288, 400), (313, 374), (322, 350), (358, 350), (372, 373), (397, 398),
+                             (410, 450), (410, 560), (397, 592), (382, 614), (283, 614), (273, 582), (276, 500)]])
+mouth(gl, "gc_mouth_madam", (176, 420, 198, 444))
+mouth(gl, "gc_mouth_driver", (320, 426, 340, 446))
+wheel(gl, "gc_wheel", (340, 508), 39, 548)
+gl.words("gc_say1", (75, 268, 300, 390), INKC)                    # "Madam, shall we drive through this motorway?"
+gl.words("gc_say2", (343, 312, 390, 348), INKC)                   # "ye"
+patch_out(gl, gl.hole, "gc_left")
+
+gr = Picture("19_1.jpg", 0, (412, 218, 898, 694), 400, ROW_H + 10, at_x=gl.x + gl.img.width + 14, at_y=ROW_Y - 5)
+cut_polys(gr, "gc_car", [[(630, 386), (714, 386), (714, 460), (630, 460)]])          # the green car
+gr.words("gc_arcs", (588, 355, 634, 434), INKC)                    # its swerve lines
+gr.words("gc_danger", (645, 278, 770, 388), INKC)                 # "le danger" and its arrow
+cut_polys(gr, "gc_pink", [[(711, 545), (799, 545), (799, 636), (711, 636)]])       # the pink van (from above)
+gr.words("gc_pinklines", (712, 636, 798, 680), INKC)
+clean = patch_out(gr, gr.hole, "gc_right")
+ImageDraw.Draw(clean).line([gr.pt(639, 370), gr.pt(638, 472)], fill=INKC, width=round(2 * gr.zoom))  # (centre line back)
+clean.save(OUT / "gc_right.jpg", quality=90)
+layout["gc_lanes"] = [gr.pt(675, 0)[0] + gr.x, gr.pt(755, 0)[0] + gr.x]      # the middle of the 2 lanes
+
+# ---- 2. everyone in the van screaming (IMG-052) ----
+sc = Picture("19_2.jpg", 90, (40, 180, 748, 740), 600, H - ROW_Y - ROW_H - 20, at_y=ROW_Y + ROW_H + 12)
+sc.img.save(OUT / "gc_scream.jpg", quality=90)
+sc.place("gc_scream", 0, 0)
+layout["gc_scream"]["w"], layout["gc_scream"]["h"] = sc.img.size
+
+# ---- 3. Joe and his bag, the R.I.P. bag, worried Enda (IMG-053) ----
+TOP2 = 400
+joe = Picture("19_3.jpg", 90, (55, 180, 295, 510), 380, TOP2 - 20, at_x=150, at_y=12)
+joe.img.save(OUT / "gc_joe.jpg", quality=90)
+joe.place("gc_joe", 0, 0)
+layout["gc_joe"]["w"], layout["gc_joe"]["h"] = joe.img.size
+b = joe.pbox((110, 278, 236, 396))                                  # his bag (it bulges as he squeezes)
+m = Image.new("L", (b[2] - b[0], b[3] - b[1]), 0)
+ImageDraw.Draw(m).rounded_rectangle((2, 2, m.width - 3, m.height - 3), 14, fill=255)
+save_png("gc_bag", joe.img.crop(b), np.asarray(m.filter(ImageFilter.GaussianBlur(2)), np.float32))
+joe.place("gc_bag", b[0], b[1])
+rip = Picture("19_3.jpg", 90, (348, 192, 690, 622), 380, TOP2 - 20, at_x=150, at_y=12)
+rip.img.save(OUT / "gc_rip.jpg", quality=90)
+rip.place("gc_rip", 0, 0)
+layout["gc_rip"]["w"], layout["gc_rip"]["h"] = rip.img.size
+
+en = Picture("19_3.jpg", 90, (55, 545, 445, 955), 400, TOP2 - 20, at_x=760, at_y=12)
+for name, box in [("gc_sweat1", (98, 612, 124, 664)), ("gc_sweat2", (88, 662, 116, 712)),
+                  ("gc_sweat3", (116, 676, 144, 718)), ("gc_sweat4", (368, 648, 404, 718))]:
+    bb = en.pbox(box)
+    m = Image.new("L", (bb[2] - bb[0], bb[3] - bb[1]), 0)
+    ImageDraw.Draw(m).ellipse((1, 1, m.width - 2, m.height - 2), fill=255)
+    a = np.zeros_like(en.ink)
+    a[bb[1]:bb[3], bb[0]:bb[2]] = np.asarray(m.filter(ImageFilter.GaussianBlur(1.2)), np.float32)
+    save_png(name, en.img.crop(bb), a[bb[1]:bb[3], bb[0]:bb[2]])
+    en.place(name, bb[0], bb[1])
+    en.hole = np.maximum(en.hole, a)
+calm = mend(en, grow(en.hole, 5))                                  # (his face, without the drops)
+en.rgb = np.asarray(calm, np.float32); en.img = calm
+disc(en, "gc_eye_l", (200, 646), 22)                               # the spiral eyes (they spin!)
+disc(en, "gc_eye_r", (296, 655), 22)
+disc(en, "gc_ewheel", (246, 853), 90)
+layout["gc_ewheel"]["r"] = round(90 * en.zoom)
+calm.save(OUT / "gc_enda.jpg", quality=90)
+en.place("gc_enda", 0, 0)
+layout["gc_enda"]["w"], layout["gc_enda"]["h"] = calm.size
+
+# the two messages, under the two pictures
+jm = Picture("19_3.jpg", 90, (452, 636, 715, 745), 360, 100, at_x=160, at_y=TOP2 + 2)
+jm.words("gc_joetext", (452, 636, 715, 745), INKC)
+em = Picture("19_3.jpg", 90, (468, 788, 730, 872), 360, 80, at_x=780, at_y=TOP2 + 10)
+em.words("gc_endatext", (468, 788, 730, 872), INKC)
+
+# ---- 4. Tasha at her window (IMG-054) ----
+TY = 508
+ta = Picture("19_4.jpg", 0, (60, 108, 550, 615), 600, H - TY - 6, at_y=TY)
+cut_polys(ta, "gc_tasha1", [[(138, 380), (148, 325), (180, 284), (230, 261), (282, 256), (326, 274), (356, 304),
+                             (366, 362), (396, 476), (392, 484), (206, 484), (188, 440), (150, 410)],
+                            [(203, 492), (238, 492), (236, 515), (203, 515)],
+                            [(337, 492), (362, 492), (360, 512), (337, 512)]])
+patch_out(ta, ta.hole, "gc_window")
+# her second look (from the right-hand picture), sized and placed so its
+# window lines up with the first window
+W1 = (133, 211, 492, 489)
+W2 = (585, 218, 910, 489)
+k = (ta.pt(W1[2], 0)[0] - ta.pt(W1[0], 0)[0]) / (W2[2] - W2[0])     # screen pixels per working pixel
+t2 = Picture("19_4.jpg", 0, W2[:2] + (W2[2], 520), round((W2[2] - W2[0]) * k), 2000,
+             at_x=ta.pt(*W1[:2])[0] + ta.x, at_y=ta.pt(*W1[:2])[1] + ta.y)
+cut_polys(t2, "gc_tasha2", [[(598, 332), (614, 295), (650, 271), (700, 267), (742, 284), (762, 318), (767, 350),
+                             (792, 376), (830, 470), (836, 482), (668, 482), (650, 420), (640, 400), (604, 386)],
+                            [(652, 490), (684, 490), (682, 512), (652, 512)],
+                            [(763, 490), (793, 490), (791, 512), (763, 512)]])
+
 (SCENE / "layout.js").write_text(
     "// Made by tools/prepare_pictures.py - do not edit by hand.\n"
     "window.LAYOUT9 = " + json.dumps(layout, indent=1) + ";\n")

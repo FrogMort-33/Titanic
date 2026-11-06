@@ -68,7 +68,26 @@
 //  138    Top panel: "Yeah, we do" (everyone in their new poses).
 //  142    Bottom panel: the big pink van, LAUGHING, jogging on the spot,
 //         HA HA HA all round it. (Still the Valkyries.)
-//  152    Fade out. (More to come!)
+//
+//   PANEL 8 - MEANWHILE... THE GREEN CAR  (IMG-051 to IMG-054)
+//  148    "Meanwhile". Left: the two green potatoes bopping along, driving
+//         (no words yet). Right: their green car bops DOWN the motorway.
+//  153    "Madam, shall we drive through this motorway?"...
+//  157    ..."ye". The driver locks the wheel round into a veer...
+//  158.8  ...the pink van comes UP the motorway from the bottom...
+//  160    ...and the green car cuts right across in front of it ("le
+//         danger") and off the right-hand side.
+//  160.8  Below: everyone in the pink van SCREAMING (lots of screams).
+//  167    New panels. Left: Joe, squeezing his bag. Right: Enda driving
+//         (sweat dripping, eyes spinning, wheel turning).
+//  169    Under Joe: "Joe squeezed his bag so hard, he left claw marks."
+//  171    Under Enda: "Meanwhile, Enda was totally fine."
+//  173    Zoom in on the bag...
+//  175    ...R.I.P. (it wobbles; wah wah wah waaah)
+//  178    Underneath: Tasha at her side window...
+//  179.5  ...looking from left to right in disbelief, following the car.
+//         The Valkyries play all the way through.
+//  189    Fade out. THE END of episode 9.
 //
 //  STORY RULE: the van travels LEFT to RIGHT (right to left is kept for
 //  its comedy retreat, later on).
@@ -112,7 +131,21 @@
     skullOut: 136.5,      // zoom back out
     yeah: 138,            // top panel: "Yeah, we do"
     laugh: 142,           // bottom panel: the laughing van
-    fadeOut: 152,
+    meanwhile: 148,       // "Meanwhile": the green potatoes and their car
+    greenTalk: 153,       // "Madam, shall we drive through this motorway?"
+    ye: 157,              // "ye"
+    veer: 158.3,          // the wheel locks round
+    vanUp: 158.8,         // the pink van comes up the motorway
+    cutAcross: 160,       // the green car cuts across and away
+    screams: 160.8,       // everyone in the van screaming
+    joe: 167,             // Joe and his bag / Enda driving
+    joeText: 169,
+    endaText: 171,
+    bagZoom: 173,         // zoom in on the bag...
+    rip: 175,             // ...R.I.P.
+    tasha: 178,           // Tasha at her window
+    look: 179.5,          // ...looks from left to right
+    fadeOut: 189,
   };
 
   const W = 1280, H = 900;          // size of the picture area
@@ -143,6 +176,13 @@
       for (const key of ["nv_van1", "nv_van2", "nv_van3", "nv_road", "nv_laugh"]) pic(key, key + ".jpg");
       for (const n of [1, 2, 3])
         for (const part of ["rear", "left", "mid", "enda", "wheel", "mouth_mid"]) pic("nv_" + part + n, "nv_" + part + n + ".png");
+      for (const key of ["gc_left", "gc_right", "gc_scream", "gc_joe", "gc_rip", "gc_enda", "gc_window"])
+        pic(key, key + ".jpg");
+      for (const key of ["gc_meanwhile", "gc_madam", "gc_driver", "gc_mouth_madam", "gc_mouth_driver", "gc_wheel",
+                         "gc_say1", "gc_say2", "gc_car", "gc_arcs", "gc_danger", "gc_pink", "gc_pinklines", "gc_bag",
+                         "gc_sweat1", "gc_sweat2", "gc_sweat3", "gc_sweat4", "gc_eye_l", "gc_eye_r", "gc_ewheel",
+                         "gc_joetext", "gc_endatext", "gc_tasha1", "gc_tasha2"])
+        pic(key, key + ".png");
       for (const key of ["nv_award", "nv_mouth_rear1", "nv_mouth_rear2", "nv_say1", "nv_say2", "nv_say3", "nv_say4",
                          "nv_say5", "nv_pink", "nv_speed", "nv_fire", "nv_hahavan", "nv_haspeed", "nv_ha"])
         pic(key, key + ".png");
@@ -176,6 +216,10 @@
       this.at(TIMES.happy, () => { this.cut(); this.showRoundabout(); });
       this.at(TIMES.award - 0.6, () => { RightSounds.pastoralOff(0.6); this.cameras.main.fadeOut(500, 0, 0, 0); });
       this.at(TIMES.award, () => { this.cut(); this.showAward(); });
+      this.at(TIMES.meanwhile - 0.6, () => this.cameras.main.fadeOut(500, 0, 0, 0));
+      this.at(TIMES.meanwhile, () => { this.cut(); this.showMeanwhile(); });
+      this.at(TIMES.joe - 0.5, () => this.cameras.main.fadeOut(400, 0, 0, 0));
+      this.at(TIMES.joe, () => { this.cut(); this.showJoe(); });
       this.at(TIMES.fadeOut, () => {
         RightSounds.valkyriesOff(2.5);
         this.cameras.main.fadeOut(2500, 0, 0, 0);
@@ -805,6 +849,186 @@
         this.tweens.add({ targets: [bg, van, ha], alpha: 1, duration: 500 });
         RightSounds.haha();
         this.loops.push(this.time.addEvent({ delay: 2200, loop: true, callback: () => RightSounds.haha() }));
+      });
+    }
+
+    // =====================================================================
+    //  PANEL 8 - MEANWHILE... THE GREEN CAR CUTS UP THE VAN
+    // =====================================================================
+
+    // A see-through "mask" in the shape of a box: things are only seen
+    // inside it (so cars appear from the panel's edge, not the page's)
+    boxMask(box) {
+      const shape = this.make.graphics({ add: false });
+      shape.fillStyle(0xffffff).fillRect(box.x + 6, box.y + 6, box.w - 12, box.h - 12);
+      return shape.createGeometryMask();
+    }
+
+    // A picture with its "middle" put somewhere else (cx, cy): handy for
+    // a car whose speed lines must come with it
+    carGroup(keys, cx, cy) {
+      const group = this.add.container(cx, cy);
+      for (const k of keys) group.add(this.add.image(L[k].x - cx, L[k].y - cy, k).setOrigin(0));
+      return group;
+    }
+
+    showMeanwhile() {
+      const t0 = TIMES.meanwhile;                         // this part's start
+      const title = this.placed("gc_meanwhile").setAlpha(0);
+      this.tweens.add({ targets: title, alpha: 1, duration: 600 });
+
+      // ---- left mini panel: the two green potatoes, bopping along ----
+      this.placed("gc_left");
+      const madam = this.bopSeat("gc_madam", 400, 3, ["gc_mouth_madam"]);
+      const driver = this.bopSeat("gc_driver", 440, 2, ["gc_mouth_driver", "gc_wheel"]);
+
+      // ---- right mini panel: their green car, bopping DOWN the motorway ----
+      const road = L.gc_right;
+      this.placed("gc_right");
+      const inside = this.boxMask(road);
+      const carTex = this.textures.get("gc_car").getSourceImage();
+      const carX = L.gc_car.x + carTex.width / 2, carY = L.gc_car.y + carTex.height / 2;  // where it's drawn
+      const car = this.carGroup(["gc_car"], carX, carY).setMask(inside);
+      car.y = road.y - 60;                                // starts above the top...
+      this.tweens.add({ targets: car, y: carY, duration: 4500, ease: "Sine.easeOut" });   // ...and comes down
+      const bob = this.tweens.add({ targets: car.list[0], y: car.list[0].y - 3, duration: 120, yoyo: true, repeat: -1 });
+      RightSounds.engine(TIMES.screams - t0);
+
+      // the green potatoes talk
+      this.at(TIMES.greenTalk - t0, () => {
+        this.say("gc_say1", this.add.container(0, 0));
+        this.talk(madam.parts.gc_mouth_madam, 2.6, 1.3);
+      });
+      this.at(TIMES.ye - t0, () => {
+        this.say("gc_say2", this.add.container(0, 0));
+        this.talk(driver.parts.gc_mouth_driver, 0.5, 0.9);
+      });
+      // the driver locks the wheel round: VEER
+      this.at(TIMES.veer - t0, () => {
+        const wheel = driver.parts.gc_wheel;
+        this.tweens.killTweensOf(wheel);
+        this.tweens.add({ targets: wheel, angle: 85, duration: 250, ease: "Back.easeOut" });
+      });
+
+      // the pink van comes UP from the bottom, bopping along
+      this.at(TIMES.vanUp - t0, () => {
+        const vt = this.textures.get("gc_pink").getSourceImage();
+        const vx = L.gc_pink.x + vt.width / 2, vy = L.gc_pink.y + vt.height / 2;
+        const van = this.carGroup(["gc_pink", "gc_pinklines"], vx, vy).setMask(inside);
+        van.y = road.y + road.h + 60;
+        this.tweens.add({ targets: van, y: vy, duration: 1200, ease: "Sine.easeOut" });
+        this.tweens.add({ targets: van.list[0], y: van.list[0].y - 3, duration: 110, yoyo: true, repeat: -1 });
+        this.tweens.add({ targets: van.list[1], alpha: 0.3, duration: 90, yoyo: true, repeat: -1 });
+        // when the green car cuts in: the van slams its brakes (a jolt back)
+        this.at(TIMES.cutAcross - TIMES.vanUp + 0.4, () => {
+          this.tweens.add({ targets: van, y: vy + 25, duration: 160, yoyo: true, ease: "Quad.easeOut" });
+        });
+      });
+
+      // the green car cuts across, in front of the van, and off to the right
+      this.at(TIMES.cutAcross - t0, () => {
+        bob.stop();
+        // its swerve lines and "le danger" come with it
+        car.add(this.add.image(L.gc_arcs.x - carX, L.gc_arcs.y - carY, "gc_arcs").setOrigin(0));
+        const danger = this.add.image(L.gc_danger.x - carX, L.gc_danger.y - carY, "gc_danger").setOrigin(0).setScale(0);
+        car.add(danger);
+        this.tweens.add({ targets: danger, scale: 1, duration: 200, ease: "Back.easeOut" });
+        RightSounds.screech();
+        this.tweens.add({ targets: car, x: road.x + road.w + 120, y: carY + 110, angle: -40, duration: 1500,
+                          ease: "Quad.easeIn" });
+        this.time.delayedCall(300, () => RightSounds.honk(1.1));
+      });
+
+      // ---- below: everyone in the pink van SCREAMING ----
+      this.at(TIMES.screams - t0, () => {
+        const sc = this.middle(this.placed("gc_scream"));
+        this.tweens.add({ targets: sc, scale: { from: 0.5, to: 1 }, duration: 300, ease: "Back.easeOut" });
+        this.tweens.add({ targets: sc, x: sc.x + 5, duration: 45, yoyo: true, repeat: -1 });   // shaking with fright
+        this.cameras.main.shake(700, 0.01);
+        // lots of screams, one after another (each potato's a bit different)
+        [[0, 1], [0.35, 1.25], [0.8, 0.85], [1.2, 1.4], [1.7, 1.1], [2.3, 0.95]].forEach(([when, pitch]) =>
+          this.time.delayedCall(when * 1000, () => RightSounds.wilhelm(pitch)));
+      });
+    }
+
+    // Joe and his bag (left), Enda "totally fine" (right), Tasha (below)
+    showJoe() {
+      const t0 = TIMES.joe;                               // this part's start
+
+      // ---- Joe, squeezing his bag ----
+      const jb = L.gc_joe;
+      const bt = this.textures.get("gc_bag").getSourceImage();
+      const bx = L.gc_bag.x + bt.width / 2, by = L.gc_bag.y + bt.height / 2;   // the middle of his bag
+      // everything in one container, centred on the bag, so we can zoom on it
+      const joe = this.add.container(bx, by);
+      joe.add(this.add.image(jb.x - bx, jb.y - by, "gc_joe").setOrigin(0));
+      const bag = this.add.image(0, 0, "gc_bag");
+      joe.add(bag);
+      joe.setMask(this.boxMask({ x: jb.x - 6, y: jb.y - 6, w: jb.w + 12, h: jb.h + 12 }));
+      this.tweens.add({ targets: joe, x: bx + 2, duration: 50, yoyo: true, repeat: -1 });         // trembling
+      this.tweens.add({ targets: bag, scaleX: 1.05, scaleY: 1.1, duration: 260, yoyo: true, repeat: -1 });  // SQUEEZE
+      const creaks = this.time.addEvent({ delay: 520, loop: true, callback: () => RightSounds.squeeze() });
+      this.loops.push(creaks);
+
+      this.at(TIMES.joeText - t0, () => this.say("gc_joetext", this.add.container(0, 0)));
+      this.at(TIMES.endaText - t0, () => this.say("gc_endatext", this.add.container(0, 0)));
+
+      // zoom in on the bag...
+      this.at(TIMES.bagZoom - t0, () => {
+        this.tweens.add({ targets: joe, scale: 2.6, x: jb.x + jb.w / 2, y: jb.y + jb.h / 2, duration: 1400,
+                          ease: "Cubic.easeIn" });
+      });
+      // ...and it's dead. R.I.P. (with a wobble)
+      this.at(TIMES.rip - t0, () => {
+        creaks.remove();
+        joe.destroy();
+        const rip = this.middle(this.placed("gc_rip"));
+        rip.x = jb.x + jb.w / 2;
+        this.tweens.add({ targets: rip, scale: { from: 1.4, to: 1 }, duration: 400, ease: "Back.easeOut" });
+        this.tweens.add({ targets: rip, angle: { from: -6, to: 6 }, duration: 300, ease: "Sine.easeInOut",
+                          yoyo: true, repeat: -1 });
+        RightSounds.sadTrombone();
+      });
+
+      // ---- Enda, "totally fine" ----
+      this.placed("gc_enda");
+      const wheel = this.middle(this.placed("gc_ewheel"));
+      this.tweens.add({ targets: wheel, angle: { from: -16, to: 16 }, duration: 700, ease: "Sine.easeInOut",
+                        yoyo: true, repeat: -1 });
+      for (const [key, dir] of [["gc_eye_l", 1], ["gc_eye_r", -1]]) {          // spinning spiral eyes
+        const eye = this.middle(this.placed(key));
+        this.tweens.add({ targets: eye, angle: 360 * dir, duration: 1200, repeat: -1 });
+      }
+      // sweat: each drop runs down, fades, and comes again
+      [["gc_sweat1", 1100], ["gc_sweat2", 1300], ["gc_sweat3", 1200], ["gc_sweat4", 1000]].forEach(([key, speed]) => {
+        const drop = this.placed(key);
+        this.tweens.add({ targets: drop, y: drop.y + 45, alpha: { from: 1, to: 0 }, duration: speed,
+                          ease: "Quad.easeIn", repeat: -1 });
+      });
+
+      // ---- Tasha at her side window ----
+      this.at(TIMES.tasha - t0, () => {
+        const win = this.placed("gc_window").setAlpha(0);
+        const head = this.placed("gc_tasha1").setAlpha(0);
+        this.tweens.add({ targets: [win, head], alpha: 1, duration: 600 });
+        const h0 = head.x;
+        head.x -= 25;                                     // looking back to the LEFT first
+        // ...then her eyes follow the car from left to right
+        this.at(TIMES.look - TIMES.tasha, () => {
+          this.tweens.add({ targets: head, x: h0 + 10, duration: 1800, ease: "Sine.easeInOut" });
+          this.time.delayedCall(1300, () => {
+            // she turns to look RIGHT (the second drawing), still moving
+            const head2 = this.placed("gc_tasha2").setAlpha(0);
+            const x2 = head2.x;
+            head2.x = x2 - 10;
+            this.tweens.add({ targets: head2, alpha: 1, x: x2 + 10, duration: 700, ease: "Sine.easeOut" });
+            this.tweens.add({ targets: head, alpha: 0, duration: 500 });
+            RightSounds.worry();
+            // disbelief: a little shake of the head
+            this.time.delayedCall(1200, () =>
+              this.tweens.add({ targets: head2, angle: { from: -3, to: 3 }, duration: 160, yoyo: true, repeat: 7 }));
+          });
+        });
       });
     }
   }
