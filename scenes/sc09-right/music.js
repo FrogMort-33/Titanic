@@ -16,6 +16,9 @@
 //    RightSounds.whoosh()         something flying in fast
 //    RightSounds.boop()           BOOP! a rubbery bounce (the tyre hits)
 //    RightSounds.boing()          a springy "boi-oi-oing" as it flies off
+//    RightSounds.ahem()           a polite little "ah-hem" (two soft notes)
+//    RightSounds.sting()          DUN-DUN! a worried warning
+//    RightSounds.scream()         a big wobbly 8-bit shriek
 //
 //  (Called "RightSounds" so it can share a page with the other
 //   episodes' sounds on the "Play all" page.)
@@ -268,6 +271,41 @@ const RightSounds = (() => {
       g.gain.linearRampToValueAtTime(0, t + 1);
       o.connect(g).connect(out);
       o.start(t); wob.start(t); o.stop(t + 1.05); wob.stop(t + 1.05);
+    },
+
+    // a polite "ah-HEM": two soft notes, the second higher
+    ahem() {
+      wake();
+      beep(330, 0, 0.18, "triangle", 0.12);
+      beep(440, 0.22, 0.3, "triangle", 0.12);
+    },
+
+    // DUN-DUN! two low, loud notes, the second one lower
+    sting() {
+      wake();
+      beep(147, 0, 0.25, "square", 0.12);
+      beep(139, 0.3, 0.6, "square", 0.12);
+    },
+
+    // a shriek: a high note that shoots up and wobbles wildly
+    scream() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "square";
+      o.frequency.setValueAtTime(500, t);
+      o.frequency.exponentialRampToValueAtTime(1400, t + 0.25);
+      o.frequency.setValueAtTime(1400, t + 1.4);
+      o.frequency.exponentialRampToValueAtTime(700, t + 1.9);
+      const wob = ctx.createOscillator(), depth = ctx.createGain();
+      wob.frequency.value = 11; depth.gain.value = 90;
+      wob.connect(depth).connect(o.frequency);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.09, t + 0.05);
+      g.gain.setValueAtTime(0.09, t + 1.5);
+      g.gain.linearRampToValueAtTime(0, t + 1.9);
+      o.connect(g).connect(out);
+      o.start(t); wob.start(t); o.stop(t + 2); wob.stop(t + 2);
     },
   };
 })();

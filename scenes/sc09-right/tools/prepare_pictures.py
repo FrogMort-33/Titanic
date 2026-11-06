@@ -19,6 +19,10 @@ Makes, in ../assets/:
   rt_scuff.png      the scuff mark it leaves on the van
   rt_words.png      the arrow and "Random tyre hitting the car"
   rt_wash.jpg       Spud Enda: "It'll come off in the wash!"
+  ds_blank.jpg      the inside of the van with no seats (IMG-041)
+  ds_left/mid/right.png  the three front seats with their potatoes;
+  ds_mid2.png       the middle seat again, worried;  ds_say1/2.png  her words
+  ds_scream.jpg     "DRIVE ON THE RIIIGHT!" (IMG-042)
   (rt_bus.png is the bus from episode 1, for crossing the screen)
 
 And layout.js (window.LAYOUT9): where everything goes, in screen pixels.
@@ -284,6 +288,62 @@ wd.words("rt_words", (466, 643, 978, 697), INKC)
 # =====================================================================
 wash = Picture("17_3.jpg", 0, (637, 312, 988, 646), W - 120, H - 80)
 wash.save_on_paper("rt_wash")
+
+# =====================================================================
+#  PANEL 5: "Drive on the RIGHT, Enda" (IMG-041, master 17_5.jpg, and
+#  IMG-042, master 17_6.jpg)
+# =====================================================================
+# The top row of IMG-041 is the three front seats. We cut each seat (and
+# its potato) out so they can bop about, and the middle one twice: once
+# smiling (top row), once worried (bottom row - exactly 330 lower on the
+# page, so we cut that row with the same box moved down by 330).
+SEATS = Picture("17_5.jpg", 0, (150, 0, 852, 420), W, H)
+WORRIED = Picture("17_5.jpg", 0, (150, 330, 852, 750), W, H)
+SEAT_L = [(195, 382), (195, 300), (210, 240), (250, 208), (300, 199), (345, 213), (380, 248),
+          (392, 300), (390, 388)]
+SEAT_M = [(385, 388), (388, 300), (405, 250), (445, 221), (490, 213), (540, 224), (575, 260),
+          (588, 320), (585, 398)]
+SEAT_R = [(575, 398), (578, 300), (595, 240), (635, 204), (680, 191), (730, 204), (765, 244),
+          (778, 310), (776, 404)]
+
+def cut_seat(pic, name, outline):
+    """a seat and its potato, cut along a traced outline"""
+    xs, ys = [x for x, _ in outline], [y for _, y in outline]
+    b = pic.pbox((min(xs) - 2, min(ys) - 2, max(xs) + 2, max(ys) + 2))
+    a = polygon_mask(pic.img.size, [pic.pt(x, y) for x, y in outline], 1.0)
+    save_png(name, pic.img.crop(b), a[b[1]:b[3], b[0]:b[2]])
+    pic.place(name, b[0], b[1])
+    pic.hole = np.maximum(pic.hole, a)
+
+cut_seat(SEATS, "ds_left", SEAT_L)
+cut_seat(SEATS, "ds_mid", SEAT_M)
+cut_seat(SEATS, "ds_right", SEAT_R)
+cut_seat(WORRIED, "ds_mid2", [(x, y + 330) for x, y in SEAT_M])
+SEATS.words("ds_say1", (440, 4, 760, 175), INKC)                  # "Drive on the RIGHT, Enda" (calm)
+WORRIED.words("ds_say2", (478, 418, 852, 535), INKC)              # ...and again (worried)
+# (that box also caught the top of the next seat: rub out its bottom-right)
+im = Image.open(OUT / "ds_say2.png")
+al = np.asarray(im.getchannel("A")).copy()
+bx = WORRIED.pbox((478, 418, 852, 535))
+cx, cy = WORRIED.pt(562, 512)
+al[cy - bx[1]:, cx - bx[0]:] = 0
+im.putalpha(Image.fromarray(al)); im.save(OUT / "ds_say2.png")
+# where the middle potato's face is (to zoom in on), and Enda's steering wheel
+layout["ds_face"] = [SEATS.pt(488, 330)[0] + SEATS.x, SEATS.pt(488, 330)[1] + SEATS.y]
+layout["ds_wheel"] = [SEATS.pt(668, 418)[0] + SEATS.x, SEATS.pt(668, 418)[1] + SEATS.y,
+                      round(46 * SEATS.zoom)]
+layout["ds_floor"] = SEATS.pt(0, 402)[1] + SEATS.y
+# the empty van: patch over the seats and words with plain paper
+# the empty van: all plain paper (patches of the blank page), with the
+# line along the bottom where the seats sit
+empty = quilt_from(SEATS, (160, 110, 440, 185), False, 40)
+empty = Image.fromarray(np.clip(empty, 0, 255).astype(np.uint8))
+ImageDraw.Draw(empty).line([SEATS.pt(150, 380), SEATS.pt(810, 406)], fill=INKC, width=round(2.5 * SEATS.zoom))
+SEATS.save_on_paper("ds_blank", empty)
+
+# IMG-042: the scream, the whole picture
+scream = Picture("17_6.jpg", 0, (78, 88, 898, 690), W - 60, H - 40)
+scream.save_on_paper("ds_scream")
 
 (SCENE / "layout.js").write_text(
     "// Made by tools/prepare_pictures.py - do not edit by hand.\n"

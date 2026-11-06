@@ -27,7 +27,15 @@
 //   PANEL 3 - "IT'LL COME OFF IN THE WASH!"  (IMG-039, right-hand picture)
 //   38    Spud Enda, not worried at all, with the happy country tune
 //         from episode 8. Hold for 5...
-//   44    Fade out. (More to come!)
+//
+//   PANEL 4 - DRIVE ON THE RIGHT  (IMG-041 and IMG-042)
+//   45    Full screen: the three front seats, everybody happily bopping
+//         along, Enda's steering wheel turning. (Still the happy tune.)
+//   48    The middle seat, smiling: "Drive on the RIGHT, Enda" (ahem)
+//   54    Quick swap: now she's WORRIED. "DRIVE on the RIGHT" (dun-dun!)
+//   58    Zoom in on her face...
+//   59.5  ...and SWAP: "DRIVE ON THE RIIIGHT!" The music stops dead. Hold...
+//   65    Fade out. (More to come!)
 //
 //  STORY RULE: the van travels LEFT to RIGHT (right to left is kept for
 //  its comedy retreat, later on).
@@ -50,7 +58,12 @@
     hit: 30.7,
     words: 32,
     wash: 38,             // "It'll come off in the wash!"
-    fadeOut: 44,
+    seats: 45,            // the three front seats
+    say1: 48,             // "Drive on the RIGHT, Enda" (smiling)
+    say2: 54,             // worried: "DRIVE on the RIGHT"
+    zoom: 58,
+    scream: 59.5,         // "DRIVE ON THE RIIIGHT!"
+    fadeOut: 65,
   };
 
   const W = 1280, H = 900;          // size of the picture area
@@ -68,7 +81,8 @@
     preload() {
       const packed = window.ASSETS || {};
       const pic = (key, file) => this.load.image(key, packed[key] || "assets/" + file);
-      for (const key of ["rt_later", "rt_blank", "rt_wash"]) pic(key, key + ".jpg");
+      for (const key of ["rt_later", "rt_blank", "rt_wash", "ds_blank", "ds_scream"]) pic(key, key + ".jpg");
+      for (const key of ["ds_left", "ds_mid", "ds_right", "ds_mid2", "ds_say1", "ds_say2"]) pic(key, key + ".png");
       for (const key of ["rt_bus", "rt_plates", "rt_van", "rt_tyre", "rt_lump", "rt_scuff", "rt_words"])
         pic(key, key + ".png");
     }
@@ -93,10 +107,11 @@
       this.at(TIMES.wash, () => {
         this.cut();
         this.add.image(0, 0, "rt_wash").setOrigin(0);       // just the picture, held
-        RightSounds.pastoral(TIMES.fadeOut - TIMES.wash + 3);
+        RightSounds.pastoral(TIMES.scream - TIMES.wash + 1);   // on through the seats
       });
+      this.at(TIMES.seats - 0.8, () => this.cameras.main.fadeOut(700, 0, 0, 0));
+      this.at(TIMES.seats, () => { this.cut(); this.showSeats(); });
       this.at(TIMES.fadeOut, () => {
-        RightSounds.pastoralOff(2.5);
         this.cameras.main.fadeOut(2500, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => showEnd());  // in index.html / play-all.html
       });
@@ -237,6 +252,85 @@
         words.setScale(0);
         this.tweens.add({ targets: words, scale: 1, duration: 400, ease: "Back.easeOut" });
         RightSounds.pop();
+      });
+    }
+
+    // =====================================================================
+    //  PANEL 4 - DRIVE ON THE RIGHT
+    // =====================================================================
+    showSeats() {
+      const t0 = TIMES.seats;                             // this picture's start
+      this.add.image(0, 0, "ds_blank").setOrigin(0);
+
+      // Enda's steering wheel: a circle with an X in it (like the book's),
+      // drawn at the bottom of his seat, turning left and right. Only the
+      // part above the floor line shows (a "mask").
+      const [wx, wy, wr] = L.ds_wheel;
+      const wheel = this.add.graphics({ x: wx, y: wy });
+      wheel.lineStyle(7, 0x1c1a18).strokeCircle(0, 0, wr);
+      wheel.lineStyle(5, 0x1c1a18).lineBetween(-wr * 0.7, -wr * 0.7, wr * 0.7, wr * 0.7)
+                                  .lineBetween(wr * 0.7, -wr * 0.7, -wr * 0.7, wr * 0.7);
+      wheel.fillStyle(0x1c1a18).fillCircle(0, 0, 7);
+      const above = this.make.graphics({ add: false });
+      above.fillStyle(0xffffff).fillRect(0, 0, W, L.ds_floor);
+
+      // The three seats (with their potatoes), all bopping along to the
+      // music - each at a slightly different speed, so they don't match
+      const seat = (key, speed, lean) => {
+        const s = this.placed(key);
+        s.setOrigin(0.5, 1).setPosition(s.x + s.width / 2, s.y + s.height);   // pivot at the bottom
+        this.tweens.add({ targets: s, y: s.y - 12, duration: speed, ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+        this.tweens.add({ targets: s, angle: { from: -lean, to: lean }, duration: speed * 2,
+                          ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+        return s;
+      };
+      seat("ds_left", 380, 3);
+      const mid = seat("ds_mid", 420, 2.5);
+      const right = seat("ds_right", 400, 2);
+      // the wheel goes in front of Enda, and turns
+      this.children.bringToTop(wheel);
+      wheel.setMask(above.createGeometryMask());
+      wheel.angle = -25;
+      this.tweens.add({ targets: wheel, angle: 25, duration: 1000, ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+
+      // 1) Smiling: "Drive on the RIGHT, Enda"
+      let words = null;
+      this.at(TIMES.say1 - t0, () => {
+        words = this.placed("ds_say1").setAlpha(0);
+        this.tweens.add({ targets: words, alpha: 1, duration: 400 });
+        RightSounds.ahem();
+      });
+
+      // 2) Quick swap: worried now, and louder: "DRIVE on the RIGHT"
+      this.at(TIMES.say2 - t0, () => {
+        mid.setTexture("ds_mid2");
+        words.destroy();
+        words = this.middle(this.placed("ds_say2"));
+        words.x -= 90;                                      // (room to grow without leaving the screen)
+        this.tweens.add({ targets: words, scale: { from: 0.6, to: 1.15 }, duration: 250, ease: "Back.easeOut" });
+        this.tweens.add({ targets: words, angle: { from: -3, to: 3 }, duration: 70, yoyo: true, repeat: -1 });
+        RightSounds.sting();
+        this.cameras.main.shake(300, 0.005);
+      });
+
+      // 3) Zoom in on her face...
+      this.at(TIMES.zoom - t0, () => {
+        const [fx, fy] = L.ds_face;
+        this.cameras.main.pan(fx, fy, 1400, "Cubic.easeIn");
+        this.cameras.main.zoomTo(3, 1400, "Cubic.easeIn");
+      });
+
+      // ...and SWAP to the screaming picture. The music stops dead.
+      this.at(TIMES.scream - t0, () => {
+        RightSounds.pastoralOff(0.05);
+        this.cameras.main.setZoom(1).centerOn(W / 2, H / 2);
+        this.tweens.killAll();
+        this.children.removeAll(true);
+        const big = this.add.image(W / 2, H / 2, "ds_scream").setScale(1.6);
+        this.tweens.add({ targets: big, scale: 1, duration: 350, ease: "Back.easeOut" });
+        this.cameras.main.flash(250, 255, 255, 255);
+        this.cameras.main.shake(900, 0.012);
+        RightSounds.scream();
       });
     }
   }
