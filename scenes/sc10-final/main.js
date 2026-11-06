@@ -1,6 +1,6 @@
 // =====================================================================
-//  main.js  -  EPISODE 10 "Final Destination (almost)"
-//              (uses IMG-055)
+//  main.js  -  EPISODE 10 "Final Destination (almost)"  (complete)
+//              (uses IMG-055, 057, 060, 061, 062 and 063)
 // =====================================================================
 //
 //  THE PLAN (times in seconds after the viewer taps Play)
@@ -66,7 +66,15 @@
 //  131.5  "Meanwhile, Enda was totally fine."
 //  134    Enda: "I'm like a frog in boiling water!"
 //  137.5  An EDITOR'S NOTE pops up to explain.
-//  150    Fade out.
+//
+//   PART 6 - LE SERVICES  (IMG-063)
+//  147.5  "FIVE MINUTES LATER" (big, slowly getting closer)...
+//  151.5  ...the shop, titled "LE SERVICES". The shopkeeper looks normal.
+//  152.5  The two happy potatoes bop in from the left...
+//  156.5  ...and ask: "Un Pizza plz?"  Hold for 5...
+//  164    ...the shopkeeper ERUPTS: she bounces, the screen shakes, her face
+//         changes to the shout, "WHAT?!" and pizza slices fly out.
+//  172    Fade out - the end of Episode 10.
 //
 //  To change WHEN things happen, change the numbers in TIMES below.
 //  To change how FAST the vehicles go, change SPEED below.
@@ -123,7 +131,15 @@
     frogLine: 134,        // Enda: "I'm like a frog in boiling water!"
     frogFor: 3,
     note: 137.5,          // the editor's note pops up
-    fadeOut: 150,
+    // PART 6 - Le Services
+    later3: 147.5,        // "FIVE MINUTES LATER"
+    shop: 151.5,          // the shop, "LE SERVICES"
+    walkIn: 152.5,        // the potatoes bop in...
+    walkFor: 3,           // ...taking this long
+    ask: 156.5,           // "Un Pizza plz?"
+    askFor: 2.5,
+    erupt: 164,           // "WHAT?!"
+    fadeOut: 172,
   };
 
   const SPEED = {         // in screen pixels per second, along the road
@@ -176,7 +192,9 @@
       pic("fd_road", "fd_road.jpg");
       for (const key of ["tb_later", "tb_booth", "tb_inside", "tb_frame1", "tb_frame2", "tb_frame3"]) pic(key, key + ".jpg");
       pic("et_town", "et_town.jpg");
-      for (const key of ["sv_four", "sv_two", "sv_road", "fg_frog"]) pic(key, key + ".jpg");
+      for (const key of ["sv_four", "sv_two", "sv_road", "fg_frog", "ls_later", "ls_shop"]) pic(key, key + ".jpg");
+      for (const key of ["ls_shout", "ls_calm", "ls_pots", "ls_mouth_l", "ls_mouth_r", "ls_pizza", "ls_what",
+                         "ls_slice1", "ls_slice2"]) pic(key, key + ".png");
       for (const key of ["fg_mouth", "fg_wheel", "fg_meanwhile", "fg_line"]) pic(key, key + ".png");
       for (const key of ["sv_mouth_rosie", "sv_mouth_enda", "sv_wheel_a", "sv_dvt", "sv_foot", "sv_mouth_ann",
                          "sv_wheel_b", "sv_break", "sv_van"])
@@ -331,6 +349,10 @@
       this.at(TIMES.dvt, () => { this.cut(); this.showServices(); });
       this.at(TIMES.zoomEnda, () => this.zoomOnEnda());
       this.at(TIMES.frog, () => { this.cut(); this.showFrog(); });
+      this.at(TIMES.later3 - 0.6, () => cam.fadeOut(500, 0, 0, 0));
+      this.at(TIMES.later3, () => { this.cut(); this.showLater3(); });
+      this.at(TIMES.shop - 0.6, () => cam.fadeOut(500, 0, 0, 0));
+      this.at(TIMES.shop, () => { this.cut(); this.showShop(); });
 
       // ---- the end ----
       this.at(TIMES.fadeOut, () => {
@@ -868,6 +890,89 @@
       this.tweens.add({ targets: card, scale: { from: 0.2, to: 1 }, alpha: { from: 0, to: 1 }, duration: 450,
                         ease: "Back.easeOut" });
       FinalSounds.tada();
+    }
+
+    // =====================================================================
+    //  PART 6 - LE SERVICES: "Un Pizza plz?"  "WHAT?!"
+    // =====================================================================
+
+    // "FIVE MINUTES LATER", big, creeping slowly closer
+    showLater3() {
+      const card = this.middled("ls_later");
+      this.tweens.add({ targets: card, scale: { from: 1, to: 1.12 }, duration: (TIMES.shop - TIMES.later3) * 1000 });
+    }
+
+    showShop() {
+      const t0 = TIMES.shop;                              // this part's start
+      const box = L.ls_shop;
+
+      // ---- the title, at the top ----
+      const title = this.add.text(W / 2, 58, "LE SERVICES",
+        { fontFamily: "Arial Black, Arial, sans-serif", fontSize: "64px", color: "#ffe81f",
+          stroke: "#1c1a18", strokeThickness: 10 }).setOrigin(0.5);
+      this.tweens.add({ targets: title, scale: { from: 0.3, to: 1 }, alpha: { from: 0, to: 1 }, duration: 600,
+                        ease: "Back.easeOut" });
+
+      // ---- the empty shop, and the shopkeeper (calm, for now) ----
+      this.placed("ls_shop");
+      const calm = this.placed("ls_calm");
+      const shout = this.placed("ls_shout").setVisible(false);
+      const keeper = this.add.container(0, 0, [calm, shout]);   // (so both faces bounce together)
+      // she breathes gently while she waits
+      const idle = this.tweens.add({ targets: keeper, y: -3, duration: 900, ease: "Sine.easeInOut", yoyo: true,
+                                     repeat: -1 });
+
+      // ---- the two potatoes bop in from the left (only seen inside the
+      //      picture: a "mask") ----
+      const shape = this.make.graphics({ add: false });
+      shape.fillStyle(0xffffff).fillRect(box.x, box.y, box.w, box.h);
+      const pots = this.add.container(-700, 0).setMask(shape.createGeometryMask());
+      const left = this.mouthAt("ls_mouth_l"), right = this.mouthAt("ls_mouth_r");
+      pots.add([this.placed("ls_pots"), left, right]);
+      this.at(TIMES.walkIn - t0, () => {
+        this.tweens.add({ targets: pots, x: 0, duration: TIMES.walkFor * 1000, ease: "Sine.easeOut" });
+        // bop, bop, bop as they walk... then a happy little bop now and then
+        this.tweens.add({ targets: pots, y: -12, duration: 200, ease: "Sine.easeInOut", yoyo: true,
+                          repeat: Math.round(TIMES.walkFor * 1000 / 400) - 1,
+                          onComplete: () => this.tweens.add({ targets: pots, y: -5, duration: 400, yoyo: true,
+                                                              repeat: -1, repeatDelay: 600 }) });
+      });
+
+      // ---- "Un Pizza plz?" - both of them, at once ----
+      this.at(TIMES.ask - t0, () => {
+        this.pop("ls_pizza");
+        this.talk(left, TIMES.askFor, 1.25);
+        this.talk(right, TIMES.askFor, 1.0);
+      });
+
+      // ---- she ERUPTS ----
+      this.at(TIMES.erupt - t0, () => {
+        FinalSounds.pastoralOff(0.05);                    // the music stops dead
+        idle.stop();
+        calm.setVisible(false);
+        shout.setVisible(true);                           // the shouting face
+        FinalSounds.sting();
+        FinalSounds.scream();                             // "WHAT?!"
+        this.cameras.main.shake(700, 0.02);               // the whole screen shakes
+        // she jumps up and bounces down, three times
+        keeper.y = 0;
+        this.tweens.add({ targets: keeper, y: -55, duration: 220, ease: "Quad.easeOut", yoyo: true, repeat: 2 });
+        // "WHAT?!" bursts out, and keeps trembling
+        const what = this.middled("ls_what");
+        this.tweens.add({ targets: what, scale: { from: 0.2, to: 1 }, duration: 380, ease: "Back.easeOut" });
+        this.tweens.add({ targets: what, angle: { from: -2.5, to: 2.5 }, duration: 90, yoyo: true, repeat: -1 });
+        // pizza slices fly out of her, spinning, and land where they're drawn
+        const [hx, hy] = this.centreOf("ls_shout");
+        for (const [key, turns] of [["ls_slice1", -2], ["ls_slice2", 2]]) {
+          const slice = this.middled(key);
+          this.tweens.add({ targets: slice, x: { from: hx, to: slice.x }, y: { from: hy, to: slice.y },
+                            angle: { from: 360 * turns, to: 0 }, scale: { from: 0.3, to: 1 }, duration: 800,
+                            ease: "Cubic.easeOut" });
+        }
+        // and the potatoes jump in fright
+        this.tweens.killTweensOf(pots);
+        this.tweens.add({ targets: pots, y: -30, x: -25, duration: 160, ease: "Quad.easeOut", yoyo: true });
+      });
     }
   }
 

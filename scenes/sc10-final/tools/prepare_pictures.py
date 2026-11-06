@@ -558,6 +558,97 @@ layout["sv_face"] = on_screen(ap, 548, 322) + on_screen(ap, 612, 405)       # En
 fl = Picture("22_1.jpg", 90, (470, 412, 662, 487), 520, 210, at_x=fg.x + 40, at_y=fg.y + 90)
 fl.words("fg_line", (470, 412, 662, 487), INKC)          # "I'm like a frog in boiling water!"
 
+# =====================================================================
+#  PART 6: LE SERVICES - "Un Pizza plz?" "WHAT?!" (IMG-063, master 23_1.jpg)
+#  First "FIVE MINUTES LATER" (big). Then the shop: the two potatoes walk
+#  in and ask; the shopkeeper looks normal at first... then erupts.
+# =====================================================================
+whole(Picture("23_1.jpg", 0, (550, 116, 834, 356), W - 80, H - 80), "ls_later")
+
+TITLE_H = 110                                    # room at the top for the "LE SERVICES" title
+sh = Picture("23_1.jpg", 0, (180, 110, 548, 358), W - 40, H - TITLE_H - 20, at_y=TITLE_H)
+
+# ---- the shopkeeper (her head, hair and arms, down to the line along
+#      her bottom edge) - she is cut out so she can bounce ----
+SHOP = [(333, 196), (342, 170), (351, 157), (368, 156), (377, 166), (392, 158), (420, 151), (446, 146),
+        (470, 144), (492, 150), (499, 167), (507, 190), (507, 221), (516, 225), (524, 237), (536, 247),
+        (537, 273), (524, 287), (517, 293), (516, 302), (508, 303)]
+shop_a = polygon_mask(sh.img.size, [sh.pt(x, y) for x, y in SHOP], 1.0)
+ys, xs = np.nonzero(shop_a > 10)
+sb = (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)
+save_png("ls_shout", sh.img.crop(sb), shop_a[sb[1]:sb[3], sb[0]:sb[2]])       # as drawn: shouting
+sh.place("ls_shout", sb[0], sb[1])
+
+# her NORMAL face: the spiral eyes and the shouting mouth are smudged over
+# with her own skin colour, then calm eyes and a little smile drawn on
+calm = sh.img.copy()
+# (only the features themselves are covered - anything inside these boxes
+#  that ISN'T plain skin: ink, the green spirals, the pink tongue - so her
+#  hair and hat next to them are left alone)
+boxes = np.zeros_like(sh.ink)
+for box in [(421, 166, 450, 189), (453, 184, 482, 218), (407, 186, 458, 238), (443, 166, 469, 184)]:
+    boxes = np.maximum(boxes, box_hole(sh, box))
+r_, g_, b_ = sh.rgb[..., 0], sh.rgb[..., 1], sh.rgb[..., 2]
+skinlike = (sh.ink < 30) & (r_ > g_ + 8) & (g_ > b_ - 4) & (r_ - b_ < 60)      # peach, not green or pink
+face_hole = np.where((boxes > 0) & ~skinlike, 255.0, 0.0)
+face_hole = grow(face_hole, 7) * (grow(boxes, 3) > 0)
+# fill: smudged in from the skin around the features, plus crayon grain
+good = ((face_hole < 10) & skinlike & (shop_a > 200)).astype(np.float32)
+fill = fill_holes(sh.rgb, good)
+fill = np.asarray(Image.fromarray(np.clip(fill, 0, 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(4)), np.float32)
+fill = fill + rng.normal(0, 5, fill.shape[:2])[..., None]
+soft = np.asarray(Image.fromarray(face_hole.astype(np.uint8)).filter(ImageFilter.GaussianBlur(2)),
+                  np.float32)[..., None] / 255
+calm = Image.fromarray(np.clip(sh.rgb * (1 - soft) + fill * soft, 0, 255).astype(np.uint8))
+d = ImageDraw.Draw(calm)
+k = sh.zoom
+for cx, cy in [(435, 177), (467, 198)]:                                        # two calm dot eyes
+    x, y = sh.pt(cx, cy)
+    d.ellipse((x - 3.2 * k, y - 3.2 * k, x + 3.2 * k, y + 3.2 * k), fill=INK)
+x0, y0 = sh.pt(424, 212); x1, y1 = sh.pt(446, 220)                              # a polite little smile
+d.arc((x0, y0 - 8 * k, x1, y1), 20, 160, fill=INK, width=max(2, round(1.3 * k)))
+save_png("ls_calm", calm.crop(sb), shop_a[sb[1]:sb[3], sb[0]:sb[2]])
+sh.place("ls_calm", sb[0], sb[1])
+
+# ---- the two potatoes (they walk in) ----
+POTS = [(181, 202), (189, 182), (205, 177), (221, 184), (231, 168), (237, 154), (252, 147), (269, 149),
+        (283, 160), (291, 185), (289, 226), (283, 241), (268, 246), (247, 246), (242, 262), (226, 270),
+        (200, 270), (183, 261)]
+pa = polygon_mask(sh.img.size, [sh.pt(x, y) for x, y in POTS], 1.0)
+ys, xs = np.nonzero(pa > 10)
+pb = (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)
+save_png("ls_pots", sh.img.crop(pb), pa[pb[1]:pb[3], pb[0]:pb[2]])
+sh.place("ls_pots", pb[0], pb[1])
+round_patch(sh, "ls_mouth_l", (212, 234, 232, 248))      # the left potato's mouth (under her glasses)
+round_patch(sh, "ls_mouth_r", (253, 197, 277, 212))      # the right potato's smile
+layout["ls_mouth_l"]["dx"] = layout["ls_mouth_l"]["x"] - layout["ls_pots"]["x"]   # (mouths ride on the potatoes)
+layout["ls_mouth_r"]["dx"] = layout["ls_mouth_r"]["x"] - layout["ls_pots"]["x"]
+
+# ---- words and pizzas ----
+sh.words("ls_pizza", (268, 116, 357, 162), INKC)         # "Un Pizza plz?"
+sh.hole[:] = 0
+not_her = 1 - shop_a / 255
+what = sh.ink * not_her                                  # "WHAT?!" (just the ink that isn't her)
+b = sh.pbox((326, 204, 522, 362))
+save_png("ls_what", Image.new("RGB", (b[2] - b[0], b[3] - b[1]), INKC), what[b[1]:b[3], b[0]:b[2]] *
+         (1 - polygon_mask(sh.img.size, [sh.pt(x, y) for x, y in [(314, 270), (352, 270), (352, 326), (314, 326)]], 0)
+          / 255)[b[1]:b[3], b[0]:b[2]] *
+         (1 - polygon_mask(sh.img.size, [sh.pt(x, y) for x, y in [(364, 302), (418, 302), (418, 352), (364, 352)]], 0)
+          / 255)[b[1]:b[3], b[0]:b[2]])
+sh.place("ls_what", b[0], b[1])
+sh.solid("ls_slice1", (314, 274, 352, 326), [(314, 282), (335, 274), (352, 278), (346, 326), (338, 326)])
+sh.solid("ls_slice2", (364, 302, 418, 352), [(364, 322), (410, 302), (418, 310), (416, 352), (404, 352)])
+
+# ---- the empty shop: everything that moves or pops up is rubbed out,
+#      filled with the peach crayon of the wall ----
+hole = np.maximum(np.maximum(shop_a, pa), sh.hole)
+hole = np.maximum(hole, what)
+hole = np.maximum(hole, box_hole(sh, (268, 116, 357, 162)))
+shop = mend(sh, grow(hole, 9), (190, 285, 300, 352), 20)
+shop.save(OUT / "ls_shop.jpg", quality=90); sh.place("ls_shop", 0, 0)
+layout["ls_shop"]["w"], layout["ls_shop"]["h"] = shop.size
+print("ls_shop.jpg", shop.size)
+
 (SCENE / "layout.js").write_text(
     "// Made by tools/prepare_pictures.py - do not edit by hand.\n"
     "window.LAYOUT10 = " + json.dumps(layout, indent=1) + ";\n")
