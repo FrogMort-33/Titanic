@@ -123,7 +123,10 @@
         CountrySounds.pastoralOff(2.5);
         if (this.wordsCam) this.wordsCam.fadeOut(2500, 0, 0, 0);
         this.cameras.main.fadeOut(2500, 0, 0, 0);
-        this.cameras.main.once("camerafadeoutcomplete", () => showEnd());  // in index.html / play-all.html
+        this.cameras.main.once("camerafadeoutcomplete", () => {
+          if (window.PLAY_ALL) this.scene.start("right");      // "Play all": on to episode 9
+          else showEnd();                                       // in index.html
+        });
       });
     }
 
