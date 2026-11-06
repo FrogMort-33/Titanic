@@ -392,8 +392,8 @@ window.LAYOUT9 = {
   "h": 360
  },
  "gc_lanes": [
-  840,
-  900
+  770,
+  865
  ],
  "gc_scream": {
   "x": 363,

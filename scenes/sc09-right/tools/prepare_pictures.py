@@ -682,6 +682,15 @@ patch_out(gl, gl.hole, "gc_left")
 
 gr = Picture("19_1.jpg", 0, (412, 218, 898, 694), 400, ROW_H + 10, at_x=gl.x + gl.img.width + 14, at_y=ROW_Y - 5)
 cut_polys(gr, "gc_car", [[(630, 386), (714, 386), (714, 460), (630, 460)]])          # the green car
+# (the car's cut-out also caught bits of the road's middle line and its
+#  swerve lines on its left: rub those out, so the car can drive anywhere)
+im = Image.open(OUT / "gc_car.png")
+al = np.asarray(im.getchannel("A")).copy()
+k = im.width / 68                             # (the numbers below were measured at 68 px wide)
+al[:, :round(6 * k)] = 0
+al[:round(13 * k), :round(14 * k)] = 0
+al[round(45 * k):, :round(14 * k)] = 0
+im.putalpha(Image.fromarray(al)); im.save(OUT / "gc_car.png")
 gr.words("gc_arcs", (588, 355, 634, 434), INKC)                    # its swerve lines
 gr.words("gc_danger", (645, 278, 770, 388), INKC)                 # "le danger" and its arrow
 cut_polys(gr, "gc_pink", [[(711, 545), (799, 545), (799, 636), (711, 636)]])       # the pink van (from above)
@@ -689,7 +698,7 @@ gr.words("gc_pinklines", (712, 636, 798, 680), INKC)
 clean = patch_out(gr, gr.hole, "gc_right")
 ImageDraw.Draw(clean).line([gr.pt(639, 370), gr.pt(638, 472)], fill=INKC, width=round(2 * gr.zoom))  # (centre line back)
 clean.save(OUT / "gc_right.jpg", quality=90)
-layout["gc_lanes"] = [gr.pt(675, 0)[0] + gr.x, gr.pt(755, 0)[0] + gr.x]      # the middle of the 2 lanes
+layout["gc_lanes"] = [gr.pt(583, 0)[0] + gr.x, gr.pt(708, 0)[0] + gr.x]      # the middle of the left and right lanes
 
 # ---- 2. everyone in the van screaming (IMG-052) ----
 sc = Picture("19_2.jpg", 90, (40, 180, 748, 740), 600, H - ROW_Y - ROW_H - 20, at_y=ROW_Y + ROW_H + 12)

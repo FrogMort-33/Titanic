@@ -889,8 +889,13 @@
       const carTex = this.textures.get("gc_car").getSourceImage();
       const carX = L.gc_car.x + carTex.width / 2, carY = L.gc_car.y + carTex.height / 2;  // where it's drawn
       const car = this.carGroup(["gc_car"], carX, carY).setMask(inside);
-      car.y = road.y - 60;                                // starts above the top...
-      this.tweens.add({ targets: car, y: carY, duration: 4500, ease: "Sine.easeOut" });   // ...and comes down
+      // it starts above the top of the LEFT-hand lane, facing straight
+      // down the road (the drawing is a little tilted, so we turn it 8
+      // degrees back), and comes down that lane
+      car.x = L.gc_lanes[0];
+      car.y = road.y - 60;
+      car.angle = -8;
+      this.tweens.add({ targets: car, y: carY, duration: 4500, ease: "Sine.easeOut" });
       const bob = this.tweens.add({ targets: car.list[0], y: car.list[0].y - 3, duration: 120, yoyo: true, repeat: -1 });
       RightSounds.engine(TIMES.screams - t0);
 
@@ -930,12 +935,16 @@
         bob.stop();
         // its swerve lines and "le danger" come with it
         car.add(this.add.image(L.gc_arcs.x - carX, L.gc_arcs.y - carY, "gc_arcs").setOrigin(0));
-        const danger = this.add.image(L.gc_danger.x - carX, L.gc_danger.y - carY, "gc_danger").setOrigin(0).setScale(0);
-        car.add(danger);
+        // "le danger" stays upright, just above the car, following it
+        const danger = this.add.image(car.x - 10, car.y - 70, "gc_danger").setScale(0).setMask(inside);
         this.tweens.add({ targets: danger, scale: 1, duration: 200, ease: "Back.easeOut" });
+        const follow = () => danger.setPosition(car.x - 10, car.y - 70);
         RightSounds.screech();
-        this.tweens.add({ targets: car, x: road.x + road.w + 120, y: carY + 110, angle: -40, duration: 1500,
-                          ease: "Quad.easeIn" });
+        // first it TURNS (towards the right)...
+        this.tweens.add({ targets: car, angle: -60, duration: 450, ease: "Quad.easeOut" });
+        // ...then shoots across both lanes, in front of the van, and away
+        this.tweens.add({ targets: car, x: road.x + road.w + 120, y: carY + 110, duration: 1500, delay: 150,
+                          ease: "Quad.easeIn", onUpdate: follow });
         this.time.delayedCall(300, () => RightSounds.honk(1.1));
       });
 
