@@ -849,7 +849,7 @@
 
     // A "toast": a little card that pops up with a note from the editor
     editorsNote() {
-      const x = 930, y = 575, w = 660, h = 300;           // its middle, and its size
+      const x = 930, y = 545, w = 660, h = 300;           // its middle, and its size
       const card = this.add.container(x, y);
       const shadow = this.add.graphics().fillStyle(0x000000, 0.25).fillRoundedRect(-w / 2 + 8, -h / 2 + 8, w, h, 18);
       const back = this.add.graphics().fillStyle(0xfffbe6).fillRoundedRect(-w / 2, -h / 2, w, h, 18)
