@@ -359,7 +359,10 @@
         FinalSounds.pastoralOff(2.5);
         FinalSounds.valkyriesOff(2.5);
         cam.fadeOut(2500, 0, 0, 0);
-        cam.once("camerafadeoutcomplete", () => showEnd());   // in index.html / play-all.html
+        cam.once("camerafadeoutcomplete", () => {
+          if (window.PLAY_ALL) this.scene.start("fiery");     // "Play all": on to episode 11
+          else showEnd();                                     // in index.html
+        });
       });
     }
 
