@@ -557,6 +557,144 @@ fr.place("fr_road", 0, 0)
 layout["fr_road"]["w"], layout["fr_road"]["h"] = road.size
 print("fr_road.jpg", road.size)
 
+# =====================================================================
+#  PART 8: "ANY LAY-BYS?" (IMG-072, top panel of master 26_1.jpg)
+#  The road up the mountain, with the pink van, the crashed blue car, its
+#  two dead potatoes and the words all cut out: they come back one by one.
+# =====================================================================
+bl = Picture("26_1.jpg", 0, (0, 85, 945, 622), W, H)
+# ---- the blue car (drawn UPSIDE DOWN, crashed) and its two potatoes ----
+bl.solid("bl_car", (786, 510, 892, 618), [(786, 512), (892, 512), (892, 617), (786, 617)])
+bl.solid("bl_pot1", (740, 596, 782, 622), [(740, 597), (782, 597), (782, 621), (740, 621)])
+bl.solid("bl_pot2", (906, 573, 939, 603), [(906, 574), (939, 574), (939, 602), (906, 602)])
+car_hole = bl.hole.copy()
+# ---- the pink van (facing right) ----
+bl.hole[:] = 0
+bl.solid("bl_van", (118, 476, 278, 586), [(119, 492), (150, 487), (250, 479), (264, 477), (276, 486), (278, 575),
+                                         (262, 586), (140, 586), (119, 576)])
+van_hole = bl.hole.copy()
+# ---- the words: the question, then the answer ----
+bl.words("bl_ask1", (782, 192, 928, 228), INKC)       # 'Do we have
+bl.words("bl_ask2", (712, 230, 888, 266), INKC)       #  any lay-bys?'
+bl.words("bl_say1", (686, 322, 918, 358), INKC)       # 'No, but we have
+bl.words("bl_say2", (652, 362, 938, 401), INKC)       #  ditches that lead off
+bl.words("bl_say3", (756, 407, 864, 448), INKC)       #  a cliff.'
+hole = np.zeros_like(bl.ink)
+for box in [(780, 190, 930, 230), (710, 228, 890, 268), (684, 320, 920, 360), (650, 360, 940, 403),
+            (754, 405, 866, 450)]:
+    hole = np.maximum(hole, box_hole(bl, box))
+rgb = np.asarray(mend(bl, hole, (700, 275, 930, 318), 20), np.float32)    # yellow crayon texture
+# (the patches brought a few stray pen dots with them: smooth those away)
+smooth = np.asarray(Image.fromarray(rgb.astype(np.uint8)).filter(ImageFilter.MedianFilter(11)), np.float32)
+dots = (hole > 0) & (rgb.mean(axis=2) < smooth.mean(axis=2) - 10)
+dots = grow(dots * 255.0, 5) > 0
+rgb[dots] = smooth[dots]
+bl.rgb = rgb
+rgb = np.asarray(mend(bl, grow(van_hole, 7), (290, 500, 390, 570), 20), np.float32)   # road texture
+bl.rgb = rgb
+scene = paper_fill(bl, car_hole, 9)                   # the pale ground where the car lay
+# (a few stray pen dots were left where the words were: smooth them away)
+srgb = np.asarray(scene, np.float32)
+smooth = np.asarray(scene.filter(ImageFilter.MedianFilter(11)), np.float32)
+dots = (grow(hole, 15) > 0) & (srgb.mean(axis=2) < smooth.mean(axis=2) - 18)
+dots = grow(dots * 255.0, 5) > 0
+srgb[dots] = smooth[dots]
+scene = Image.fromarray(srgb.astype(np.uint8))
+scene.save(OUT / "bl_scene.jpg", quality=90)
+bl.place("bl_scene", 0, 0)
+layout["bl_scene"]["w"], layout["bl_scene"]["h"] = scene.size
+print("bl_scene.jpg", scene.size)
+def bl_pts(points):
+    return [[bl.pt(x, y)[0] + bl.x, bl.pt(x, y)[1] + bl.y] for x, y in points]
+# the middle of the road, from off the bottom-left, round the bend, and
+# over the hill at the top (the road gets narrower: further away)
+layout["bl_road"] = bl_pts([(-120, 585), (0, 565), (100, 548), (200, 532), (300, 505), (400, 466), (470, 426),
+                            (528, 378), (562, 322), (562, 262), (530, 215), (470, 180), (410, 150), (362, 122)])
+layout["bl_bend"] = bl_pts([(560, 340)])[0]           # where the car leaves the road
+layout["bl_edge"] = bl_pts([(612, 318)])[0]           # the van's wheels teeter here
+layout["bl_land"] = bl_pts([(839, 564)])[0]           # the crashed car's middle
+layout["bl_k"] = bl.zoom                              # (picture size, for the speeds)
+
+# =====================================================================
+#  PART 9: "MADE IT TO LE MAZEL!" (IMG-073, middle panel of 26_2.jpg)
+#  The van with flames on its roof splutters up the road to the PINK house;
+#  the tiny potato beside the house jumps for joy.
+# =====================================================================
+mz = Picture("26_2.jpg", 0, (15, 152, 895, 652), W, H)
+mz.solid("mz_van", (138, 400, 446, 652), [(140, 520), (150, 490), (170, 472), (200, 458), (260, 442), (320, 428), (385, 410),
+                                          (410, 420), (428, 445), (440, 600), (436, 624), (200, 650), (176, 640),
+                                          (150, 560)])
+van_hole = mz.hole.copy()
+mz.hole[:] = 0
+mz.solid("mz_pot", (688, 278, 726, 340), [(690, 284), (706, 276), (724, 286), (726, 330), (708, 341), (688, 334)])
+pot_hole = mz.hole.copy()
+mz.hole[:] = 0
+LINES73 = [(788, 362, 884, 397), (733, 397, 884, 434), (632, 434, 888, 472), (636, 472, 888, 512),
+           (620, 512, 898, 552), (560, 552, 898, 592), (552, 592, 902, 642)]
+for i, box in enumerate(LINES73):
+    mz.words("mz_line%d" % (i + 1), box, INKC, floor=30)
+words_hole = np.zeros_like(mz.ink)
+for box in LINES73:
+    words_hole = np.maximum(words_hole, box_hole(mz, box))
+# the road edge line runs under the van: left of it is grass, right is road
+EDGE = [(0, 636), (60, 612), (95, 575), (115, 530), (145, 495), (190, 466), (260, 441), (330, 418), (400, 393),
+        (450, 375)]
+grass = polygon_mask(mz.img.size, [mz.pt(x, y) for x, y in EDGE + [(450, 300), (0, 300)]], 0)
+vh = grow(van_hole, 9)
+mz.rgb = np.asarray(mend(mz, np.minimum(vh, 255 - grass), (455, 470, 545, 560), 20), np.float32)   # road
+mz.rgb = np.asarray(mend(mz, np.minimum(vh, grass), (25, 470, 95, 560), 20), np.float32)          # grass
+mz.rgb = np.asarray(mend(mz, grow(pot_hole, 5), None), np.float32)
+clean = mend(mz, words_hole, None)
+ImageDraw.Draw(clean).line([mz.pt(x, y) for x, y in EDGE], fill=(36, 34, 33), width=max(2, round(1.6 * mz.zoom)),
+                           joint="curve")
+clean.save(OUT / "mz_scene.jpg", quality=90)
+mz.place("mz_scene", 0, 0)
+layout["mz_scene"]["w"], layout["mz_scene"]["h"] = clean.size
+print("mz_scene.jpg", clean.size)
+# the van's road: from off the bottom, up to the house's door
+layout["mz_road"] = [[mz.pt(x, y)[0] + mz.x, mz.pt(x, y)[1] + mz.y] for x, y in
+                     [(235, 940), (300, 650), (380, 565), (470, 480), (560, 410), (640, 360), (700, 333), (757, 318)]]
+layout["mz_roof"] = [[mz.pt(x, y)[0] - mz.pt(138, 400)[0], mz.pt(x, y)[1] - mz.pt(138, 400)[1]] for x, y in
+                     [(200, 452), (250, 436), (300, 425), (350, 412), (400, 412)]]    # flames, on the van
+
+# =====================================================================
+#  PART 10: "HAPPY ANNIVERSARY HONEY..." (IMG-074, 26_3.jpg below the words)
+#  Joe (left) and Rosie (right) hold hands and cry with relief.
+# =====================================================================
+ha = Picture("26_3.jpg", 0, (0, 120, 1000, 748), W, H)
+ha.words("ha_words", (468, 126, 928, 190), INKC)      # "Happy Anniversary honey..."
+pic = paper_fill(ha, box_hole(ha, (466, 124, 930, 192)), 5)
+ha.rgb = np.asarray(pic, np.float32)
+ha.img = pic
+round_patch(ha, "ha_mouth", (232, 432, 338, 478))     # Joe's mouth (he talks)
+round_patch(ha, "ha_rmouth", (695, 400, 840, 448))    # Rosie's wobbly mouth
+round_patch(ha, "ha_hands", (455, 668, 615, 752))     # their hands, holding
+pic.save(OUT / "ha_scene.jpg", quality=90)
+ha.place("ha_scene", 0, 0)
+layout["ha_scene"]["w"], layout["ha_scene"]["h"] = pic.size
+print("ha_scene.jpg", pic.size)
+layout["ha_tears"] = [[ha.pt(x, y)[0] + ha.x, ha.pt(x, y)[1] + ha.y] for x, y in
+                      [(208, 428), (676, 424), (380, 410), (850, 412)]]    # under each eye
+layout["ha_hearts"] = [ha.pt(535, 690)[0] + ha.x, ha.pt(535, 690)[1] + ha.y]
+
+# =====================================================================
+#  PART 11: FIN (IMG-075, master 26_4.jpg turned a quarter)
+# =====================================================================
+fin = Picture("26_4.jpg", 90, (36, 0, 748, 754), W, H)
+fin.img.save(OUT / "fin_page.jpg", quality=90)
+fin.place("fin_page", 0, 0)
+layout["fin_page"]["w"], layout["fin_page"]["h"] = fin.img.size
+print("fin_page.jpg", fin.img.size)
+
+# =====================================================================
+#  PART 12: THE AFTERWORD (IMG-077, 078, 079): just shown, one at a time
+# =====================================================================
+lt = Picture("27_2.jpg", 0, (95, 108, 908, 708), W - 40, H - 40)
+lt.img = paper_fill(lt, box_hole(lt, (648, 622, 910, 710)), 5)    # (the next page's corner)
+lt.save_on_paper("aw_letter", lt.img)
+Picture("27_3.jpg", 90, (62, 222, 612, 932), W - 40, H - 40).save_on_paper("aw_quotes")
+Picture("27_4.jpg", 90, (222, 8, 618, 902), W - 40, H - 40).save_on_paper("aw_bonus")
+
 (SCENE / "layout.js").write_text(
     "// Made by tools/prepare_pictures.py - do not edit by hand.\n"
     "window.LAYOUT11 = " + json.dumps(layout, indent=1) + ";\n")

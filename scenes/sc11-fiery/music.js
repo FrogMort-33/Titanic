@@ -14,6 +14,15 @@
 //    FierySounds.heartbeat(s, bpm) a heavy, racing heartbeat
 //    FierySounds.horror(secs)     the spooky 8-bit organ tune from episode 7
 //    FierySounds.horrorOff(s)     fade it away
+//    FierySounds.valkyriesGlitch(s) the Valkyries SLOW and glitchy (pictures 73, 74)
+//    FierySounds.glitchOff(s)     fade it away
+//    FierySounds.splutter(secs)   a tired engine coughing "put... put-put"
+//    FierySounds.crash()          a crunching crash
+//    FierySounds.plop()           something light landing
+//    FierySounds.yippee()         a happy little "yippee!"
+//    FierySounds.sob(secs, pitch) happy crying "hoo-hoo-hoo"
+//    FierySounds.marseillaise(s)  the French national anthem, 8-bit (stop it
+//                                 with valkyriesOff - it shares that volume knob)
 //    FierySounds.tada()           "ta-DA!" for the pop-up picture
 //    FierySounds.pop()            a quick "bloop" as something pops up
 //    FierySounds.engine(secs)     the van's engine ticking over: brrrrm
@@ -55,7 +64,8 @@ const FierySounds = (() => {
   let tuneVol = null;      // volume knob for the Valkyries
   let engineVol = null;    // volume knob for the engine
   let countryVol = null;   // volume knob for the country tune
-  let horrorVol = null;    // volume knob for the spooky tune (from episode 7)
+  let horrorVol = null;
+  let glitchVol = null;    // volume knob for the glitchy Valkyries    // volume knob for the spooky tune (from episode 7)
 
   function wake() {
     // One shared audio engine for the whole page (iPad only lets a tap
@@ -616,6 +626,150 @@ const FierySounds = (() => {
       for (let x = 0; x < seconds; x += 60 / bpm) {
         thump(x, 0.5, 90);           // lub
         thump(x + 0.13, 0.65, 75);   // DUB
+      }
+    },
+
+    // ---- THE GLITCHY VALKYRIES (pictures 73 and 74) ----------------------
+    // The same tune as always, but SLOW (each beat 1.5 times longer), a bit
+    // out of tune, and broken up like a scratched CD:
+    //   - every note is pushed a little sharp or flat at random ("wonky")
+    //   - now and then a note STUTTERS (plays 3 times, quickly, very short)
+    //   - now and then a note just DROPS OUT (silence)
+    //   - now and then a note jumps up an octave with a crackle of hiss
+    // Math.random() makes it different every time it plays.
+    valkyriesGlitch(seconds = 30) {
+      wake();
+      if (glitchVol) glitchVol.disconnect();
+      glitchVol = ctx.createGain(); glitchVol.gain.value = 0.9; glitchVol.connect(out);
+      const SLOW = 1.5 * BEAT;                     // one (slow) beat, in seconds
+      const note = (name, when, length) => {
+        const r = Math.random();
+        let f = HZ[name] * (1 + (Math.random() - 0.5) * 0.06);    // wonky tuning
+        if (r < 0.10) return;                                     // drop out
+        if (r < 0.22) {                                           // stutter
+          for (let k = 0; k < 3; k++) beep(f, when + k * 0.07, 0.06, "square", 0.1, glitchVol);
+          return;
+        }
+        if (r < 0.30) {                                           // jump up + crackle
+          f *= 2;
+          const h = hiss(0.08), g = ctx.createGain(); g.gain.value = 0.05;
+          h.connect(g).connect(glitchVol); h.start(ctx.currentTime + when);
+        }
+        beep(f, when, length, "square", 0.11, glitchVol);
+      };
+      let t = 0.1, i = 0;
+      while (t < seconds) {
+        const [n1, n2, n3, n4, n5] = TUNE[i % TUNE.length];
+        let x = t;
+        note(n1, x, RHYTHM[0] * SLOW); x += RHYTHM[0] * SLOW;
+        note(n2, x, RHYTHM[1] * SLOW); x += RHYTHM[1] * SLOW;
+        note(n3, x, RHYTHM[2] * SLOW); x += RHYTHM[2] * SLOW;
+        if (n4 === n5) note(n4, x, 2 * SLOW);
+        else { note(n4, x, SLOW); note(n5, x + SLOW, SLOW); }
+        t += 3 * SLOW; i++;
+      }
+    },
+
+    glitchOff(seconds = 2) {
+      if (!glitchVol) return;
+      glitchVol.gain.setValueAtTime(glitchVol.gain.value, ctx.currentTime);
+      glitchVol.gain.linearRampToValueAtTime(0, ctx.currentTime + seconds);
+    },
+
+    // A tired engine SPLUTTERING: low coughs ("put... put-put... put")
+    // at uneven gaps, for 'seconds'
+    splutter(seconds = 8) {
+      wake();
+      let x = 0;
+      while (x < seconds) {
+        beep(55 + Math.random() * 25, x, 0.09, "sawtooth", 0.16);
+        x += 0.15 + Math.random() * (Math.random() < 0.2 ? 0.9 : 0.3);   // sometimes a long gap
+      }
+    },
+
+    // A CRASH: a burst of hiss that dies away, with a low thump
+    crash() {
+      wake();
+      const t = ctx.currentTime;
+      const h = hiss(0.7), g = ctx.createGain();
+      g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+      h.connect(g).connect(out); h.start(t);
+      beep(70, 0, 0.25, "sine", 0.5);
+    },
+
+    // A little "plop" (something light hitting the ground)
+    plop() {
+      wake();
+      const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine"; o.frequency.setValueAtTime(300, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.12);
+      g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.16);
+    },
+
+    // A happy little "yippee!" (two quick rising whistles)
+    yippee() {
+      wake();
+      [0, 0.18].forEach((w, k) => {
+        const t = ctx.currentTime + w, o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "triangle"; o.frequency.setValueAtTime(700 + k * 200, t);
+        o.frequency.exponentialRampToValueAtTime(1400 + k * 300, t + 0.14);
+        g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+        o.connect(g).connect(out); o.start(t); o.stop(t + 0.17);
+      });
+    },
+
+    // Happy CRYING: wobbly falling "hoo-hoo-hoo" sobs, for 'seconds'
+    sob(seconds = 4, pitch = 1) {
+      wake();
+      for (let x = 0; x < seconds; x += 0.45 + Math.random() * 0.3) {
+        const t = ctx.currentTime + x, o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = "triangle"; o.frequency.setValueAtTime(520 * pitch, t);
+        o.frequency.exponentialRampToValueAtTime(330 * pitch, t + 0.3);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.12, t + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+        o.connect(g).connect(out); o.start(t); o.stop(t + 0.33);
+      }
+    },
+
+    // ---- LA MARSEILLAISE, the French national anthem (1792, so free for
+    // anyone to use), in 8-bit, for the afterword pages. Each note is
+    // [name, length in beats]; "-" is a rest. One beat = 0.5 seconds.
+    // A trumpet-ish square wave plays the tune, a soft triangle wave plays
+    // each note an octave lower underneath (like a tuba).
+    marseillaise(seconds = 25) {
+      wake();
+      const F = { D4: 293.66, E4: 329.63, Fs4: 369.99, G4: 392.0, A4: 440.0, B4: 493.88, C5: 523.25,
+                  D5: 587.33, E5: 659.25 };
+      const TUNE = [
+        // "Al-lons en-fants de la pa-tri-e, le jour de gloi-re est ar-ri-vé!"
+        ["D4", 0.75], ["D4", 0.25], ["G4", 1], ["G4", 1], ["A4", 1], ["A4", 1], ["D5", 1.5], ["B4", 0.75],
+        ["G4", 0.25], ["G4", 0.75], ["B4", 0.25], ["G4", 0.75], ["E4", 0.25], ["C5", 2], ["A4", 0.75],
+        ["Fs4", 0.25], ["G4", 2], ["-", 1],
+        // "Contre nous de la tyrannie, l'étendard sanglant est levé"
+        ["G4", 0.75], ["A4", 0.25], ["B4", 1], ["B4", 1], ["B4", 1], ["C5", 0.75], ["B4", 0.25], ["B4", 1],
+        ["A4", 1], ["-", 1], ["A4", 0.75], ["B4", 0.25], ["C5", 1], ["C5", 1], ["C5", 1], ["D5", 0.75],
+        ["C5", 0.25], ["B4", 2], ["-", 1],
+        // "Aux armes, citoyens! Formez vos bataillons!"
+        ["D5", 2], ["B4", 0.75], ["G4", 0.25], ["A4", 3], ["-", 0.5], ["D5", 0.5], ["D5", 1.5], ["B4", 0.5],
+        ["G4", 1], ["E4", 1], ["D4", 3], ["-", 1],
+        // "Marchons, marchons!"
+        ["G4", 1.5], ["A4", 0.5], ["B4", 2], ["C5", 1.5], ["D5", 0.5], ["E5", 2], ["D5", 1], ["G4", 1],
+        ["G4", 3], ["-", 2],
+      ];
+      const BEAT2 = 0.5;
+      if (tuneVol) tuneVol.disconnect();
+      tuneVol = ctx.createGain(); tuneVol.gain.value = 0.9; tuneVol.connect(out);
+      let t = 0.1;
+      while (t < seconds) {
+        for (const [name, beats] of TUNE) {
+          if (t >= seconds) break;
+          const len = beats * BEAT2;
+          if (name !== "-") {
+            beep(F[name], t, len, "square", 0.1, tuneVol);
+            beep(F[name] / 2, t, len, "triangle", 0.12, tuneVol);
+          }
+          t += len;
+        }
       }
     },
   };
