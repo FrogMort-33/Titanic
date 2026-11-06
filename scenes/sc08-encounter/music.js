@@ -15,6 +15,14 @@
 //                                   getting LOUDER and LOUDER
 //    CountrySounds.rewind()         a tape rewinding: "wheedle-eedle-eep"
 //
+//   THE NEAR MISS
+//    CountrySounds.whisper(level)   Joe's "run..." - a breathy hiss, louder
+//                                   for each level (1, 2, 3)
+//    CountrySounds.panic(level)     a worried "uh-oh" stab, higher each level
+//    CountrySounds.drip()           a drop of sweat: "plip"
+//    CountrySounds.scream()         RUNNNN! a big wobbly shriek
+//    CountrySounds.whoosh()         the van whizzing past
+//
 //  (Called "CountrySounds" so it can share a page with the other
 //   episodes' sounds on the "Play all" page.)
 // =====================================================================
@@ -212,6 +220,87 @@ const CountrySounds = (() => {
       g.gain.linearRampToValueAtTime(0, t + 1.5);
       o.connect(g).connect(out);
       o.start(t); wob.start(t); o.stop(t + 1.6); wob.stop(t + 1.6);
+    },
+
+    // A burst of hiss (random numbers) through a filter: our "whisper"
+    whisper(level = 1) {
+      wake();
+      const t = ctx.currentTime, len = 0.6 + level * 0.3;
+      const n = Math.floor(ctx.sampleRate * len);
+      const buffer = ctx.createBuffer(1, n, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < n; i++) data[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource(); src.buffer = buffer;
+      const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 2500; f.Q.value = 1.5;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.04 * level, t + 0.1);
+      g.gain.linearRampToValueAtTime(0, t + len);
+      src.connect(f).connect(g).connect(out);
+      src.start(t);
+    },
+
+    // Two quick notes going DOWN: "uh-oh". Each level a bit higher and louder.
+    panic(level = 1) {
+      wake();
+      const top = 400 * Math.pow(1.26, level);
+      beep(top, 0, 0.12, "square", 0.04 + level * 0.015);
+      beep(top * 0.84, 0.14, 0.25, "square", 0.04 + level * 0.015);
+    },
+
+    // A drop of sweat: a tiny "plip" (a quick jump UP in pitch)
+    drip() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "sine";
+      o.frequency.setValueAtTime(900, t);
+      o.frequency.exponentialRampToValueAtTime(1900, t + 0.06);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.06, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.1);
+    },
+
+    // RUNNNN! A high note that shoots up and wobbles wildly (8-bit shriek)
+    scream() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "square";
+      o.frequency.setValueAtTime(500, t);
+      o.frequency.exponentialRampToValueAtTime(1300, t + 0.25);
+      o.frequency.setValueAtTime(1300, t + 1.2);
+      o.frequency.exponentialRampToValueAtTime(700, t + 1.6);
+      const wob = ctx.createOscillator(), depth = ctx.createGain();
+      wob.frequency.value = 11; depth.gain.value = 90;
+      wob.connect(depth).connect(o.frequency);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.09, t + 0.05);
+      g.gain.setValueAtTime(0.09, t + 1.3);
+      g.gain.linearRampToValueAtTime(0, t + 1.6);
+      o.connect(g).connect(out);
+      o.start(t); wob.start(t); o.stop(t + 1.7); wob.stop(t + 1.7);
+    },
+
+    // The van whizzing past: a swoosh of hiss that rises then falls
+    whoosh() {
+      wake();
+      const t = ctx.currentTime, len = 0.9;
+      const n = Math.floor(ctx.sampleRate * len);
+      const buffer = ctx.createBuffer(1, n, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < n; i++) data[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource(); src.buffer = buffer;
+      const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 2;
+      f.frequency.setValueAtTime(400, t);
+      f.frequency.exponentialRampToValueAtTime(3000, t + 0.35);
+      f.frequency.exponentialRampToValueAtTime(300, t + len);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.3, t + 0.3);
+      g.gain.linearRampToValueAtTime(0, t + len);
+      src.connect(f).connect(g).connect(out);
+      src.start(t);
     },
   };
 })();
