@@ -20,6 +20,12 @@
 //    RightSounds.sting()          DUN-DUN! a worried warning
 //    RightSounds.scream()         a big wobbly 8-bit shriek
 //
+//   THE ROUNDABOUT
+//    RightSounds.honk(pitch)      HONK! a car horn (two notes together)
+//    RightSounds.stall()          the engine coughs and dies: "brr-brr-blub"
+//    RightSounds.rev()            VROOM: the engine revs up again
+//    RightSounds.worry()          a wobbly "uh-oh" for worried Enda
+//
 //  (Called "RightSounds" so it can share a page with the other
 //   episodes' sounds on the "Play all" page.)
 // =====================================================================
@@ -306,6 +312,54 @@ const RightSounds = (() => {
       g.gain.linearRampToValueAtTime(0, t + 1.9);
       o.connect(g).connect(out);
       o.start(t); wob.start(t); o.stop(t + 2); wob.stop(t + 2);
+    },
+
+    // HONK: two square-wave notes at once (a real car horn is two notes
+    // that clash a little), short and loud. 'pitch' changes the car.
+    honk(pitch = 1) {
+      wake();
+      beep(370 * pitch, 0, 0.28, "square", 0.05);
+      beep(466 * pitch, 0, 0.28, "square", 0.05);
+    },
+
+    // Stalling: a few low "brrm"s, each lower and further apart, then nothing
+    stall() {
+      wake();
+      [[70, 0], [62, 0.22], [52, 0.5], [44, 0.85]].forEach(([f, when]) =>
+        beep(f, when, 0.18, "sawtooth", 0.14));
+    },
+
+    // VROOM: the engine note shoots up and comes back down
+    rev() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "sawtooth";
+      o.frequency.setValueAtTime(55, t);
+      o.frequency.exponentialRampToValueAtTime(190, t + 0.3);
+      o.frequency.exponentialRampToValueAtTime(70, t + 0.8);
+      const low = ctx.createBiquadFilter(); low.type = "lowpass"; low.frequency.value = 1100;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.2, t + 0.06);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.85);
+      o.connect(low).connect(g).connect(out); o.start(t); o.stop(t + 0.9);
+    },
+
+    // a wobbly, sliding-down "uh-ohhh"
+    worry() {
+      wake();
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = "triangle";
+      o.frequency.setValueAtTime(440, t);
+      o.frequency.exponentialRampToValueAtTime(260, t + 1.2);
+      const wob = ctx.createOscillator(), depth = ctx.createGain();
+      wob.frequency.value = 7; depth.gain.value = 12;
+      wob.connect(depth).connect(o.frequency);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.12, t);
+      g.gain.linearRampToValueAtTime(0, t + 1.3);
+      o.connect(g).connect(out);
+      o.start(t); wob.start(t); o.stop(t + 1.35); wob.stop(t + 1.35);
     },
   };
 })();

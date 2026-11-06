@@ -23,6 +23,10 @@ Makes, in ../assets/:
   ds_left/mid/right.png  the three front seats with their potatoes;
   ds_mid2.png       the middle seat again, worried;  ds_say1/2.png  her words
   ds_scream.jpg     "DRIVE ON THE RIIIGHT!" (IMG-042)
+  rb_blank.jpg      the roundabout with no cars (IMG-043); rb_pink, rb_blue1..3,
+                    rb_red1..2 the cars; rb_honk1..3, rb_oops, rb_stalled (words)
+  we_enda.jpg       worried Enda (IMG-045), with we_wheel, we_lines, we_brow_l/r,
+                    we_sweat_l/r cut out to move
   (rt_bus.png is the bus from episode 1, for crossing the screen)
 
 And layout.js (window.LAYOUT9): where everything goes, in screen pixels.
@@ -344,6 +348,89 @@ SEATS.save_on_paper("ds_blank", empty)
 # IMG-042: the scream, the whole picture
 scream = Picture("17_6.jpg", 0, (78, 88, 898, 690), W - 60, H - 40)
 scream.save_on_paper("ds_scream")
+
+# =====================================================================
+#  PANEL 6: the roundabout (IMG-043, master 17_7.jpg, left-hand picture)
+#  and worried Enda (IMG-045, master 17_9.jpg)
+# =====================================================================
+TOPW = 130                                       # room at the top for the words
+rb = Picture("17_7.jpg", 0, (20, 212, 500, 700), 610, H - TOPW - 30, at_x=20, at_y=TOPW + 10)
+# the middle of the roundabout (the trees) and the two lanes' sizes
+layout["rb_centre"] = [rb.pt(247, 450)[0] + rb.x, rb.pt(247, 450)[1] + rb.y]
+layout["rb_zoom"] = rb.zoom
+CARS = {  # name: (box, colour) - every car is cut along its box's outline
+    "rb_pink":  (243, 302, 310, 374),
+    "rb_blue2": (306, 378, 368, 448),
+    "rb_red2":  (304, 450, 370, 530),
+    "rb_blue3": (232, 516, 302, 574),
+    "rb_blue1": (56, 322, 128, 388),
+    "rb_red1":  (42, 406, 112, 472),
+}
+for name, box in CARS.items():
+    x0, y0, x1, y1 = box
+    rb.solid(name, box, [(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
+rb.words("rb_oops", (250, 262, 438, 326), INKC)                   # "Oops, that silly first gear..."
+rb.words("rb_honk1", (346, 362, 428, 428), INKC)
+rb.words("rb_honk2", (350, 490, 394, 562), INKC)
+rb.words("rb_honk3", (212, 572, 298, 652), INKC)
+for box in [(62, 382, 92, 392), (66, 476, 80, 504)]:             # the little arrows by the cars
+    rb.words("rb_junk", box)
+# The empty roundabout. A roundabout is the same all the way round, so we
+# fill each hole with the AVERAGE colour of the road at that distance from
+# the middle (worked out from everywhere that isn't a hole), plus a bit of
+# pencil texture so it doesn't look flat.
+fill_me = grow(rb.hole, 13) > 20
+for name, (x0, y0, x1, y1) in CARS.items():
+    c = rb.pbox((x0 - 8, y0 - 8, x1 + 8, y1 + 8))
+    fill_me[c[1]:c[3], c[0]:c[2]] = True
+for box in [(246, 258, 442, 330), (342, 358, 432, 432), (346, 486, 398, 566), (208, 568, 302, 656)]:
+    c = rb.pbox(box)                                          # the white patches behind the words
+    fill_me[c[1]:c[3], c[0]:c[2]] = True
+cx, cy = rb.pt(247, 450)
+yy, xx = np.mgrid[0:rb.img.height, 0:rb.img.width]
+dist = np.hypot(xx - cx, yy - cy).astype(int)                # how far each pixel is from the middle
+profile = np.zeros((dist.max() + 1, 3), np.float32)
+for r in range(dist.max() + 1):
+    ring = (np.abs(dist - r) <= 3) & ~fill_me & (rb.ink < 60)
+    if ring.sum() > 20:
+        profile[r] = np.median(rb.rgb[ring], axis=0)
+    else:
+        profile[r] = profile[r - 1]
+smooth_road = profile[dist]
+tex = quilt_from(rb, (120, 560, 190, 640), False, 20)
+tex_soft = np.asarray(Image.fromarray(np.clip(tex, 0, 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(6)), np.float32)
+out_rgb = smooth_road + (tex - tex_soft)
+soft = np.asarray(Image.fromarray((fill_me * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(3)),
+                  np.float32)[..., None] / 255
+empty = Image.fromarray(np.clip(rb.rgb * (1 - soft) + out_rgb * soft, 0, 255).astype(np.uint8))
+empty.save(OUT / "rb_blank.jpg", quality=90)
+rb.place("rb_blank", 0, 0)
+print("rb_blank.jpg", empty.size)
+
+# the words above, with their arrow (pointing left, at the roundabout)
+st = Picture("17_7.jpg", 0, (505, 158, 960, 252), W - 400, TOPW - 20, at_y=8)
+st.words("rb_stalled", (505, 158, 960, 252), INKC)
+
+# ---- worried Enda (IMG-045) ----
+we = Picture("17_9.jpg", 90, (8, 165, 748, 880), 610, H - TOPW - 30, at_x=650, at_y=TOPW + 10)
+we.words("we_lines", (262, 186, 452, 220))                       # the worry lines on his forehead
+we.words("we_brow_l", (224, 248, 258, 298))
+we.words("we_brow_r", (494, 264, 536, 306))
+we.words("we_sweat_l", (92, 370, 136, 496))
+we.words("we_sweat_r", (628, 438, 692, 506))
+calm = mend(we, grow(we.hole, 9), (300, 470, 440, 540), 16)       # (patched with his face)
+we.rgb = np.asarray(calm, np.float32)
+# the steering wheel: a disc that can turn (it covers the same space as it turns)
+WC, WR = (372, 734), 170
+disc = polygon_mask(we.img.size, [we.pt(WC[0] + WR * np.cos(t), WC[1] + WR * np.sin(t))
+                                  for t in np.linspace(0, 2 * np.pi, 60)], 1.0)
+b = we.pbox((WC[0] - WR, WC[1] - WR, WC[0] + WR, WC[1] + WR))
+save_png("we_wheel", calm.crop(b), disc[b[1]:b[3], b[0]:b[2]])
+we.place("we_wheel", b[0], b[1])
+calm.save(OUT / "we_enda.jpg", quality=90)
+we.place("we_enda", 0, 0)
+layout["we_enda"]["w"], layout["we_enda"]["h"] = calm.size
+print("we_enda.jpg", calm.size)
 
 (SCENE / "layout.js").write_text(
     "// Made by tools/prepare_pictures.py - do not edit by hand.\n"
