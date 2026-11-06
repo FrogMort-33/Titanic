@@ -27,6 +27,15 @@ Makes, in ../assets/:
                     rb_red1..2 the cars; rb_honk1..3, rb_oops, rb_stalled (words)
   we_enda.jpg       worried Enda (IMG-045), with we_wheel, we_lines, we_brow_l/r,
                     we_sweat_l/r cut out to move
+  nv_award.png      "2022's Navigation Award goes to Annelisa Christensen!" (IMG-046)
+  nv_van1/2/3.jpg   the van interior, plain (IMG-047 left, IMG-047 right, IMG-049),
+                    with nv_rear/left/mid/enda1..3 (the seats), nv_wheel1..3,
+                    nv_mouth_rear1/2 and nv_mouth_mid1..3 (mouths that talk),
+                    and nv_say1..5 (the words)
+  nv_road.jpg       the two roads with no van (IMG-048); nv_pink (the van),
+                    nv_speed (its speed lines), nv_fire (flickers)
+  nv_laugh.jpg      the laughing van picture, empty (IMG-050); nv_hahavan,
+                    nv_haspeed, nv_ha (all the HA HA HAs)
   (rt_bus.png is the bus from episode 1, for crossing the screen)
 
 And layout.js (window.LAYOUT9): where everything goes, in screen pixels.
@@ -431,6 +440,184 @@ calm.save(OUT / "we_enda.jpg", quality=90)
 we.place("we_enda", 0, 0)
 layout["we_enda"]["w"], layout["we_enda"]["h"] = calm.size
 print("we_enda.jpg", calm.size)
+
+# =====================================================================
+#  PANEL 7: THE NAVIGATION AWARD and THE WRONG ROAD
+#  (IMG-046 award, IMG-047 the potatoes chatting, IMG-048 the roads,
+#   IMG-049 "Yeah, we do", IMG-050 the laughing van - masters 18_1..18_5)
+# =====================================================================
+# Where things go on the screen:
+#   the award: first big in the middle, then shrunk into the top RIGHT
+#   the van interior (the potatoes): the top LEFT box below
+#   the roads / the laughing van: the bottom half
+TOP = (20, 12, 560, 420)          # x, y, width, height of the top-left panel
+LOW = (0, 452, W, 440)            # the bottom panel's space
+
+# ---- the award (IMG-046) ----
+# The close-up photo (18_1) is very blurry, so we take the same words from
+# the sharper copy on the next page (18_2) and print them on a fresh card.
+aw = Picture("18_2.jpg", 0, (596, 122, 975, 322), W - 260, H - 320)
+aw.words("nv_award", (596, 122, 975, 322), INKC, floor=30)
+
+def plain_paper(pic):
+    """The picture with ALL its drawing rubbed out: just the paper, with
+    its gentle light and shade (smudged in from the clean bits of paper)
+    and a little grain."""
+    good = (np.asarray(Image.fromarray((pic.ink > 18).astype(np.uint8) * 255)
+                       .filter(ImageFilter.MaxFilter(7))) < 10).astype(np.float32)
+    paper = fill_holes(pic.rgb, good)
+    paper = np.asarray(Image.fromarray(np.clip(paper, 0, 255).astype(np.uint8))
+                       .filter(ImageFilter.GaussianBlur(12)), np.float32)
+    return paper + rng.normal(0, 2.5, paper.shape[:2])[..., None]
+
+def panel_of_potatoes(master, box, seats, floor_line, blank_name):
+    """One version of the van interior: cut out each seat (with its potato)
+    so it can bop, and make a plain-paper panel to sit them on (with the
+    line of the van floor drawn back in)."""
+    pic = Picture(master, 0, box, TOP[2], TOP[3], at_x=TOP[0], at_y=TOP[1])
+    for name, outline in seats.items():
+        cut_seat(pic, name, outline)
+    empty = plain_paper(pic)
+    empty = Image.fromarray(np.clip(empty, 0, 255).astype(np.uint8))
+    ImageDraw.Draw(empty).line([pic.pt(*floor_line[0]), pic.pt(*floor_line[1])], fill=INKC,
+                               width=round(2.5 * pic.zoom))
+    empty.save(OUT / (blank_name + ".jpg"), quality=90)
+    pic.place(blank_name, 0, 0)
+    layout[blank_name]["w"], layout[blank_name]["h"] = empty.size
+    print(blank_name + ".jpg", empty.size)
+    return pic
+
+def mouth(pic, name, box):
+    """A little patch of face round a mouth, with soft round edges. The show
+    stretches it up and down to make the mouth 'talk'."""
+    b = pic.pbox(box)
+    w, h = b[2] - b[0], b[3] - b[1]
+    m = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(m).ellipse((1, 1, w - 2, h - 2), fill=255)
+    save_png(name, pic.img.crop(b), np.asarray(m.filter(ImageFilter.GaussianBlur(1.5)), np.float32))
+    pic.place(name, b[0], b[1])
+
+def wheel(pic, name, centre, r, floor_y):
+    """Enda's little steering wheel: a disc that can turn (only the part
+    above the floor line)."""
+    b = pic.pbox((centre[0] - r, centre[1] - r, centre[0] + r, floor_y))
+    disc = Image.new("L", pic.img.size, 0)
+    (cx, cy), rr = pic.pt(*centre), round(r * pic.zoom)
+    ImageDraw.Draw(disc).ellipse((cx - rr, cy - rr, cx + rr, cy + rr), fill=255)
+    save_png(name, pic.img.crop(b), np.asarray(disc, np.float32)[b[1]:b[3], b[0]:b[2]])
+    pic.place(name, b[0], b[1])
+    layout[name]["cx"], layout[name]["cy"] = cx + pic.x, cy + pic.y   # the middle, to turn round
+
+# ---- 1st version (IMG-047, left): "I think we need to go down that lane"
+p1 = panel_of_potatoes("18_2.jpg", (0, 135, 565, 505), {
+    "nv_rear1": [(0, 175), (25, 155), (65, 147), (100, 157), (120, 185), (128, 230), (126, 290),
+                 (120, 340), (0, 350)],
+    "nv_left1": [(0, 352), (45, 342), (85, 348), (108, 365), (122, 400), (131, 450), (133, 492), (0, 488)],
+    "nv_mid1": [(134, 494), (136, 410), (148, 370), (175, 342), (215, 330), (255, 338), (282, 360),
+                (296, 395), (300, 497)],
+    "nv_enda1": [(298, 499), (300, 380), (314, 342), (345, 318), (385, 308), (428, 320), (455, 355),
+                 (466, 420), (468, 502)],
+}, [(0, 488), (480, 501)], "nv_van1")
+mouth(p1, "nv_mouth_rear1", (34, 232, 56, 256))         # the little round "o"
+mouth(p1, "nv_mouth_mid1", (200, 425, 252, 466))         # her wobbly mouth
+wheel(p1, "nv_wheel1", (377, 481), 21, 492)
+p1.words("nv_say1", (128, 143, 505, 208), INKC)          # "I think we need to go down that lane"
+p1.words("nv_say2", (178, 222, 562, 322), INKC)          # "Do we? I don't know"
+# (that box also caught the top of Enda's seat: rub out its bottom right)
+im = Image.open(OUT / "nv_say2.png")
+al = np.asarray(im.getchannel("A")).copy()
+bx, (cx, cy) = p1.pbox((178, 222, 562, 322)), p1.pt(300, 298)
+al[cy - bx[1]:, cx - bx[0]:] = 0
+im.putalpha(Image.fromarray(al)); im.save(OUT / "nv_say2.png")
+
+# ---- 2nd version (IMG-047, right): "I think we do" / "Hold on"
+p2 = panel_of_potatoes("18_2.jpg", (495, 345, 988, 712), {
+    "nv_rear2": [(505, 470), (510, 410), (528, 375), (560, 352), (600, 345), (640, 355), (665, 380),
+                 (676, 425), (678, 480), (672, 540), (505, 548)],
+    "nv_left2": [(500, 705), (503, 610), (517, 570), (548, 545), (592, 535), (640, 540), (672, 560),
+                 (690, 600), (697, 703)],
+    "nv_mid2": [(697, 703), (700, 590), (712, 560), (745, 543), (790, 540), (825, 553), (840, 590),
+                (842, 701)],
+    "nv_enda2": [(840, 701), (842, 590), (856, 555), (890, 536), (935, 535), (965, 560), (980, 610),
+                 (982, 698)],
+}, [(497, 706), (985, 694)], "nv_van2")
+mouth(p2, "nv_mouth_rear2", (586, 448, 610, 480))        # the "o", shocked
+mouth(p2, "nv_mouth_mid2", (748, 628, 797, 662))         # her mouth, above her hand
+wheel(p2, "nv_wheel2", (887, 668), 20, 692)
+p2.words("nv_say3", (676, 355, 940, 418), INKC)          # "I think we do"
+p2.words("nv_say4", (712, 465, 852, 538), INKC)          # "Hold on"
+
+# ---- 3rd version (IMG-049): "Yeah, we do"
+p3 = panel_of_potatoes("18_4.jpg", (150, 240, 868, 705), {
+    "nv_rear3": [(165, 520), (165, 380), (175, 320), (200, 282), (240, 256), (290, 247), (340, 262),
+                 (372, 292), (390, 330), (398, 380), (396, 440), (388, 490), (170, 500)],
+    "nv_left3": [(168, 700), (170, 560), (192, 515), (238, 488), (290, 480), (340, 490), (380, 515),
+                 (402, 560), (410, 620), (412, 698)],
+    "nv_mid3": [(425, 694), (428, 570), (446, 520), (488, 495), (530, 490), (575, 498), (606, 528),
+                (624, 575), (630, 690)],
+    "nv_enda3": [(628, 690), (632, 570), (645, 515), (678, 480), (722, 462), (772, 467), (810, 500),
+                 (828, 560), (834, 688)],
+}, [(155, 700), (865, 682)], "nv_van3")
+mouth(p3, "nv_mouth_mid3", (497, 606, 560, 640))         # her big smile
+wheel(p3, "nv_wheel3", (707, 668), 22, 686)
+p3.words("nv_say5", (520, 355, 775, 462), INKC)          # "Yeah, we do"
+
+# ---- the roads (IMG-048, master 18_3) ----
+# The pink van is cut out (it drives through), and so are its speed lines.
+# Behind it the road is rebuilt from road texture. The bottom right corner
+# of this crop has the NEXT picture in it, so that's covered with road too.
+road = Picture("18_3.jpg", 0, (120, 315, 870, 740), LOW[2], LOW[3], at_y=LOW[1])
+road.solid("nv_pink", (190, 528, 470, 696),
+           [(190, 532), (464, 528), (470, 656), (458, 694), (376, 696), (372, 668), (338, 668),
+            (334, 696), (224, 696), (218, 664), (188, 656)])
+road.words("nv_speed", (466, 612, 610, 646), INKC)        # the speed lines behind it
+hole = grow(road.hole, 11)
+c = road.pbox((512, 668, 870, 740))                       # (the next picture's corner)
+hole[c[1]:c[3], c[0]:c[2]] = 255
+fixed = mend(road, hole, (620, 515, 850, 610), 24)
+ImageDraw.Draw(fixed).line([road.pt(505, 724), road.pt(870, 721)], fill=INKC, width=round(2.5 * road.zoom))
+fixed.save(OUT / "nv_road.jpg", quality=90)
+road.place("nv_road", 0, 0)
+layout["nv_road"]["w"], layout["nv_road"]["h"] = fixed.size
+print("nv_road.jpg", fixed.size)
+# the fire (it flickers) - just its colours and outline, cut along a rough outline
+fire = road.pbox((296, 400, 436, 494))
+f_rgb = road.rgb[fire[1]:fire[3], fire[0]:fire[2]]
+warm = (f_rgb[..., 0] - f_rgb[..., 2] > 70) & (f_rgb[..., 0] > 150)           # orange and yellow
+f_ink = road.ink[fire[1]:fire[3], fire[0]:fire[2]]
+f_a = np.maximum(warm * 255.0, f_ink)
+f_a = np.minimum(f_a, polygon_mask(road.img.size, [road.pt(x, y) for x, y in
+                 [(300, 490), (305, 440), (318, 408), (345, 418), (362, 395), (382, 420), (415, 425),
+                  (420, 450), (436, 465), (420, 492)]], 1.0)[fire[1]:fire[3], fire[0]:fire[2]])
+save_png("nv_fire", road.img.crop(fire), f_a)
+road.place("nv_fire", fire[0], fire[1])
+# the skull and crossbones sign (to zoom in on)
+layout["nv_skull"] = [road.pt(195, 410)[0] + road.x, road.pt(195, 410)[1] + road.y]
+
+# ---- the laughing van (IMG-050, master 18_5) ----
+ha = Picture("18_5.jpg", 0, (120, 370, 870, 712), LOW[2], LOW[3], at_y=LOW[1])
+VAN_HA = [(285, 430), (670, 426), (694, 604), (632, 606), (630, 646), (590, 656), (550, 650),
+          (540, 612), (440, 618), (440, 650), (410, 664), (366, 662), (342, 640), (344, 622), (286, 628)]
+ha.solid("nv_hahavan", (282, 422, 698, 668), VAN_HA)
+ha.words("nv_haspeed", (700, 570, 862, 604), INKC)
+# all the "HA"s: every bit of ink above the road that isn't the van
+b = ha.pbox((122, 372, 850, 600))
+van_mask = grow(polygon_mask(ha.img.size, [ha.pt(x, y) for x, y in VAN_HA], 1.0), 9)
+a = ha.ink.copy()
+a = np.where(van_mask > 20, 0, a)
+s = ha.pbox((700, 566, 870, 610)); a[s[1]:s[3], s[0]:s[2]] = 0    # (not the speed lines)
+save_png("nv_ha", Image.new("RGB", (b[2] - b[0], b[3] - b[1]), INKC), a[b[1]:b[3], b[0]:b[2]])
+ha.place("nv_ha", b[0], b[1])
+# Behind them: plain paper everywhere above the road line (the line and
+# the grey shading under it stay as they are)
+above = polygon_mask(ha.img.size, [ha.pt(x, y) for x, y in
+        [(122, 372), (848, 372), (866, 640), (815, 646), (700, 645), (620, 645), (520, 650),
+         (430, 662), (300, 670), (160, 684), (122, 686)]], 2.0)[..., None] / 255
+fixed = Image.fromarray(np.clip(ha.rgb * (1 - above) + plain_paper(ha) * above, 0, 255).astype(np.uint8))
+fixed.save(OUT / "nv_laugh.jpg", quality=90)
+ha.place("nv_laugh", 0, 0)
+layout["nv_laugh"]["w"], layout["nv_laugh"]["h"] = fixed.size
+print("nv_laugh.jpg", fixed.size)
 
 (SCENE / "layout.js").write_text(
     "// Made by tools/prepare_pictures.py - do not edit by hand.\n"

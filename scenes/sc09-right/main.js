@@ -45,7 +45,30 @@
 //         stalls... revs... stalls... and all the cars behind it queue up
 //         and HONK. Two cars loop round the other way. Every so often:
 //         "Oops, that silly first gear..."
-//   98    Fade out. (More to come!)
+//
+//   PANEL 6 - THE NAVIGATION AWARD  (IMG-046)
+//   98    Full screen: "2022's Navigation Award goes to Annelisa
+//         Christensen!" Fanfare and confetti. Hold...
+//  103    ...then it shrinks away into the top right corner.
+//
+//   PANEL 7 - THE WRONG ROAD  (IMG-047, IMG-048, IMG-049, IMG-050)
+//  104.5  Top left: the inside of the van - the 4 potatoes happily
+//         bopping along, Enda's wheel turning.
+//  108    The back seat: "I think we need to go down that lane" (her mouth
+//         moves, with 8-bit chatter)... pause...
+//  112    The middle seat: "Do we? I don't know". Hold for 5...
+//  119.5  The second drawing: the back seat, eyes wide: "I think we do"...
+//  123.5  ...the middle seat: "Hold on"
+//  126.5  The bottom panel appears: the two roads, the skull sign, the fire.
+//         The Ride of the Valkyries starts...
+//  128    ...and the pink van comes in from the RIGHT and speeds along the
+//         wrong road, off the left-hand side.
+//  132.5  Zoom in on the skull and crossbones (dun-dun!). Hold...
+//  136.5  ...back out.
+//  138    Top panel: "Yeah, we do" (everyone in their new poses).
+//  142    Bottom panel: the big pink van, LAUGHING, jogging on the spot,
+//         HA HA HA all round it. (Still the Valkyries.)
+//  152    Fade out. (More to come!)
 //
 //  STORY RULE: the van travels LEFT to RIGHT (right to left is kept for
 //  its comedy retreat, later on).
@@ -75,7 +98,21 @@
     scream: 59.5,         // "DRIVE ON THE RIIIGHT!"
     happy: 65,            // back to calm, happy Enda
     split: 70,            // split screen: the roundabout and worried Enda
-    fadeOut: 98,
+    award: 98,            // the navigation award, full screen
+    awardShrink: 103,     // ...shrinks into the top right
+    potatoes: 104.5,      // top panel: the 4 potatoes bopping along
+    lane1: 108,           // back seat: "I think we need to go down that lane"
+    lane2: 112,           // middle seat: "Do we? I don't know"
+    doWe: 119.5,          // 2nd drawing - back seat: "I think we do"
+    holdOn: 123.5,        // middle seat: "Hold on"
+    reveal: 126.5,        // bottom panel: the roads (and the Valkyries)
+    vanIn: 128,           // the pink van comes in from the right...
+    vanOut: 131.5,        // ...and is off the left-hand side by now
+    skull: 132.5,         // zoom in on the skull and crossbones
+    skullOut: 136.5,      // zoom back out
+    yeah: 138,            // top panel: "Yeah, we do"
+    laugh: 142,           // bottom panel: the laughing van
+    fadeOut: 152,
   };
 
   const W = 1280, H = 900;          // size of the picture area
@@ -101,6 +138,13 @@
                          "we_wheel", "we_lines", "we_brow_l", "we_brow_r", "we_sweat_l", "we_sweat_r"])
         pic(key, key + ".png");
       for (const key of ["rt_bus", "rt_plates", "rt_van", "rt_tyre", "rt_lump", "rt_scuff", "rt_words"])
+        pic(key, key + ".png");
+      // the award and the wrong road
+      for (const key of ["nv_van1", "nv_van2", "nv_van3", "nv_road", "nv_laugh"]) pic(key, key + ".jpg");
+      for (const n of [1, 2, 3])
+        for (const part of ["rear", "left", "mid", "enda", "wheel", "mouth_mid"]) pic("nv_" + part + n, "nv_" + part + n + ".png");
+      for (const key of ["nv_award", "nv_mouth_rear1", "nv_mouth_rear2", "nv_say1", "nv_say2", "nv_say3", "nv_say4",
+                         "nv_say5", "nv_pink", "nv_speed", "nv_fire", "nv_hahavan", "nv_haspeed", "nv_ha"])
         pic(key, key + ".png");
     }
 
@@ -130,9 +174,10 @@
       this.at(TIMES.seats, () => { this.cut(); this.showSeats(); });
       this.at(TIMES.happy - 0.6, () => this.cameras.main.fadeOut(500, 0, 0, 0));
       this.at(TIMES.happy, () => { this.cut(); this.showRoundabout(); });
+      this.at(TIMES.award - 0.6, () => { RightSounds.pastoralOff(0.6); this.cameras.main.fadeOut(500, 0, 0, 0); });
+      this.at(TIMES.award, () => { this.cut(); this.showAward(); });
       this.at(TIMES.fadeOut, () => {
-        RightSounds.pastoralOff(2.5);
-        RightSounds.engineOff(2);
+        RightSounds.valkyriesOff(2.5);
         this.cameras.main.fadeOut(2500, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => showEnd());  // in index.html / play-all.html
       });
@@ -233,7 +278,7 @@
       // The van, jogging along on the spot
       const van = this.middle(this.placed("rt_van"));
       this.jog(van, 4, 100);
-      RightSounds.engine(TIMES.fadeOut - t0 + 2);
+      RightSounds.engine(TIMES.wash - t0 + 1);
       // the scuff mark goes ON the van (moves with it), hidden for now
       const scuff = this.middle(this.placed("rt_scuff")).setAlpha(0);
       const scuffOffset = [scuff.x - van.x, scuff.y - van.y];
@@ -368,7 +413,7 @@
     // =====================================================================
     showRoundabout() {
       const t0 = TIMES.happy;                             // this part's start
-      RightSounds.pastoral(TIMES.fadeOut - t0 + 3);         // the happy tune again
+      RightSounds.pastoral(TIMES.award - t0 + 1);           // the happy tune again
 
       // ---- 1. Calm, happy Enda, big, in the middle, bopping along ----
       const happy = this.add.container(W / 2, H / 2 + 40);
@@ -525,6 +570,241 @@
                                  "rb_oops").setScale(0);
         this.tweens.add({ targets: o, scale: 0.9, duration: 300, ease: "Back.easeOut" });
         this.tweens.add({ targets: o, alpha: 0, delay: 2600, duration: 500, onComplete: () => o.destroy() });
+      });
+    }
+    // =====================================================================
+    //  PANEL 6 - THE NAVIGATION AWARD
+    // =====================================================================
+    showAward() {
+      const t0 = TIMES.award;                             // this part's start
+      this.cameras.main.setBackgroundColor(PAPER);
+      // The award card: the words (lifted from the book) on a gold card.
+      // Everything goes in one "container", so it can all shrink together.
+      const words = this.add.image(0, 0, "nv_award");
+      const cw = words.width + 90, ch = words.height + 70;
+      const shadow = this.add.rectangle(12, 14, cw, ch, 0x000000, 0.25);
+      const card = this.add.rectangle(0, 0, cw, ch, 0xf7d64a).setStrokeStyle(8, 0x1c1a18);
+      const inner = this.add.rectangle(0, 0, cw - 34, ch - 34).setStrokeStyle(3, 0x1c1a18);
+      const award = this.add.container(W / 2, H / 2, [shadow, card, inner, words]).setScale(0.95);
+      this.tweens.add({ targets: award, scale: 1.05, duration: 500, ease: "Back.easeOut" });   // (fits the screen)
+      RightSounds.fanfare();
+
+      // confetti: little coloured paper bits tumbling down the screen
+      const colours = [0xe84a5f, 0x2a9d8f, 0xf4a261, 0x6a4c93, 0x1d70b8, 0xffffff];
+      for (let i = 0; i < 70; i++) {
+        const bit = this.add.rectangle(Math.random() * W, -20 - Math.random() * 400, 10, 16,
+                                       Phaser.Utils.Array.GetRandom(colours));
+        this.tweens.add({ targets: bit, y: H + 40, angle: 360 * (Math.random() < 0.5 ? 2 : -2),
+                          x: bit.x + (Math.random() - 0.5) * 160,
+                          duration: 2600 + Math.random() * 2000, delay: Math.random() * 1500,
+                          onComplete: () => bit.destroy() });
+      }
+
+      // ...then it shrinks away into the top right corner, and the van
+      // interior panel comes in on the left
+      this.at(TIMES.awardShrink - t0, () => {
+        this.tweens.add({ targets: award, x: 935, y: 220, scale: 0.5, duration: 1300, ease: "Cubic.easeInOut" });
+      });
+      this.at(TIMES.potatoes - t0, () => this.showLane());
+    }
+
+    // =====================================================================
+    //  PANEL 7 - THE WRONG ROAD
+    // =====================================================================
+
+    // One seat (with its potato) that bops along. 'extras' are other
+    // pictures that must move WITH it (a mouth, the steering wheel).
+    // We put them all in a "container" whose middle is the bottom of the
+    // seat, so the seat rocks from its base.
+    bopSeat(key, speed, lean, extras = []) {
+      const s = L[key];
+      const tex = this.textures.get(key).getSourceImage();
+      const bx = s.x + tex.width / 2, by = s.y + tex.height;     // bottom middle of the seat
+      const box = this.add.container(bx, by);
+      box.add(this.add.image(0, 0, key).setOrigin(0.5, 1));
+      box.parts = {};
+      for (const k of extras) {
+        const e = L[k];
+        const img = this.add.image(0, 0, k);
+        if (e.cx) {
+          // the steering wheel turns round its own middle
+          img.setOrigin((e.cx - e.x) / img.width, (e.cy - e.y) / img.height).setPosition(e.cx - bx, e.cy - by);
+          this.tweens.add({ targets: img, angle: { from: -22, to: 22 }, duration: 900, ease: "Sine.easeInOut",
+                            yoyo: true, repeat: -1 });
+        } else {
+          // a mouth: its pivot is near its top, so it opens DOWNWARDS
+          img.setOrigin(0.5, 0.3).setPosition(e.x + img.width / 2 - bx, e.y + img.height * 0.3 - by);
+        }
+        box.add(img);
+        box.parts[k] = img;
+      }
+      this.tweens.add({ targets: box, y: by - 7, duration: speed, ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+      this.tweens.add({ targets: box, angle: { from: -lean, to: lean }, duration: speed * 2,
+                        ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+      return box;
+    }
+
+    // One version of the van interior (n = 1, 2 or 3): the plain panel,
+    // then the 4 seats, back seat first (so the front seats are in front)
+    potatoPanel(n) {
+      const group = this.add.container(0, 0);
+      group.add(this.placed("nv_van" + n));
+      const seats = {};
+      seats.rear = this.bopSeat("nv_rear" + n, 430, 2, n < 3 ? ["nv_mouth_rear" + n] : []);
+      seats.left = this.bopSeat("nv_left" + n, 380, 2.5);
+      seats.mid = this.bopSeat("nv_mid" + n, 410, 2, ["nv_mouth_mid" + n]);
+      seats.enda = this.bopSeat("nv_enda" + n, 400, 1.5, ["nv_wheel" + n]);
+      group.add([seats.rear, seats.left, seats.mid, seats.enda]);
+      group.seats = seats;
+      return group;
+    }
+
+    // Talking: the mouth stretches open and shut, quickly, for 'secs'
+    // (it only ever gets BIGGER than the drawing, so it always covers it),
+    // with 8-bit chatter. 'pitch': higher for some potatoes than others.
+    talk(mouth, secs, pitch) {
+      const flaps = Math.round(secs * 1000 / 220);
+      this.tweens.add({ targets: mouth, scaleY: 1.8, scaleX: 1.12, duration: 110, ease: "Sine.easeInOut",
+                        yoyo: true, repeat: flaps - 1 });
+      RightSounds.chatter(secs, pitch);
+    }
+
+    // Words appear (a quick pop), and stay
+    say(key, group) {
+      const words = this.middle(this.placed(key));
+      group.add(words);
+      this.tweens.add({ targets: words, scale: { from: 0.4, to: 1 }, alpha: { from: 0, to: 1 }, duration: 300,
+                        ease: "Back.easeOut" });
+      return words;
+    }
+
+    showLane() {
+      const t0 = TIMES.potatoes;                          // this part's start
+      RightSounds.pastoral(TIMES.reveal - t0 + 1);          // happy again... for now
+
+      // ---- the van interior, top left ----
+      let top = this.potatoPanel(1).setAlpha(0);
+      this.tweens.add({ targets: top, alpha: 1, duration: 700 });
+
+      // the back seat: "I think we need to go down that lane"
+      this.at(TIMES.lane1 - t0, () => {
+        this.say("nv_say1", top);
+        this.talk(top.seats.rear.parts.nv_mouth_rear1, 2.4, 1.15);
+      });
+      // ...pause... the middle seat: "Do we? I don't know"
+      this.at(TIMES.lane2 - t0, () => {
+        this.say("nv_say2", top);
+        this.talk(top.seats.mid.parts.nv_mouth_mid1, 2.2, 1);
+      });
+      // the 2nd drawing (same place): back seat, eyes wide: "I think we do"
+      this.at(TIMES.doWe - t0, () => {
+        top.destroy();
+        top = this.potatoPanel(2);
+        this.say("nv_say3", top);
+        this.talk(top.seats.rear.parts.nv_mouth_rear2, 1.6, 1.15);
+      });
+      // the middle seat: "Hold on"
+      this.at(TIMES.holdOn - t0, () => {
+        this.say("nv_say4", top);
+        this.talk(top.seats.mid.parts.nv_mouth_mid2, 1.0, 1);
+      });
+
+      // ---- the bottom panel: the roads ----
+      this.at(TIMES.reveal - t0, () => this.showRoad());
+
+      // ---- "Yeah, we do" (IMG-049), in the top panel ----
+      this.at(TIMES.yeah - t0, () => {
+        const old = top;
+        top = this.potatoPanel(3).setAlpha(0);
+        this.tweens.add({ targets: top, alpha: 1, duration: 400, onComplete: () => old.destroy() });
+        this.time.delayedCall(500, () => {
+          this.say("nv_say5", top);
+          this.talk(top.seats.mid.parts.nv_mouth_mid3, 1.4, 1);
+        });
+      });
+    }
+
+    // The bottom panel: the right road (with the tick) and the WRONG road
+    // (skull and crossbones, fire). The pink van speeds down the wrong one.
+    showRoad() {
+      const t0 = TIMES.reveal;                            // this part's start
+      RightSounds.pastoralOff(0.8);
+      RightSounds.valkyries(TIMES.fadeOut - t0 + 3);       // all the way to the end
+
+      const panel = this.add.container(0, 0);
+      const road = this.placed("nv_road");
+      const box = L.nv_road;
+      // the fire flickers: it stretches up and down from its bottom
+      const fire = this.placed("nv_fire");
+      fire.setOrigin(0.5, 1).setPosition(fire.x + fire.width / 2, fire.y + fire.height);
+      this.tweens.add({ targets: fire, scaleY: 1.18, scaleX: 1.05, duration: 160, yoyo: true, repeat: -1 });
+      panel.add([road, fire]);
+      // the panel slides up into place
+      panel.y = 40; panel.alpha = 0;
+      this.tweens.add({ targets: panel, y: 0, alpha: 1, duration: 700, ease: "Cubic.easeOut" });
+
+      // anything in the bottom panel is only seen INSIDE it (a "mask"),
+      // so the van appears from the panel's right-hand edge
+      const shape = this.make.graphics({ add: false });
+      shape.fillStyle(0xffffff).fillRect(box.x, box.y, box.w, box.h);
+      const inside = shape.createGeometryMask();
+
+      // ---- the pink van: in from the RIGHT, off to the LEFT ----
+      this.at(TIMES.vanIn - t0, () => {
+        const vanPic = L.nv_pink, lines = L.nv_speed;
+        const tex = this.textures.get("nv_pink").getSourceImage();
+        const vx = vanPic.x + tex.width / 2, vy = vanPic.y + tex.height / 2;   // where it was drawn
+        const body = this.add.image(0, 0, "nv_pink");
+        const speed = this.add.image(lines.x - vx, lines.y - vy, "nv_speed").setOrigin(0);  // behind it (right)
+        const van = this.add.container(box.x + box.w + 300, vy, [speed, body]).setMask(inside);
+        this.jog(body, 5, 90);
+        this.tweens.add({ targets: speed, alpha: 0.4, duration: 90, yoyo: true, repeat: -1 });
+        this.tweens.add({ targets: van, x: box.x - 300, duration: (TIMES.vanOut - TIMES.vanIn) * 1000, ease: "Linear" });
+        RightSounds.rev();
+        RightSounds.whoosh();
+        // dust puffs behind it (on its right)
+        const dust = this.time.addEvent({ delay: 90, loop: true, callback: () => {
+          const puff = this.add.circle(van.x + tex.width / 2 + 10, vy + tex.height / 2 - 12, 8 + Math.random() * 10,
+                                       0x8f897f).setAlpha(0.55).setMask(inside);
+          this.tweens.add({ targets: puff, x: puff.x + 60, y: puff.y - 20, scale: 2, alpha: 0, duration: 600,
+                            onComplete: () => puff.destroy() });
+        } });
+        this.loops.push(dust);
+        this.at(TIMES.vanOut - TIMES.vanIn + 0.3, () => { dust.remove(); van.destroy(); });
+      });
+
+      // ---- zoom in on the skull and crossbones ----
+      this.at(TIMES.skull - t0, () => {
+        const [sx, sy] = L.nv_skull;
+        this.cameras.main.pan(sx + 20, sy + 30, 1400, "Cubic.easeInOut");   // (a little below, to miss the top panel)
+        this.cameras.main.zoomTo(3.2, 1400, "Cubic.easeInOut");
+        this.time.delayedCall(1300, () => { RightSounds.sting(); this.cameras.main.shake(400, 0.003); });
+      });
+      this.at(TIMES.skullOut - t0, () => {
+        this.cameras.main.pan(W / 2, H / 2, 1000, "Cubic.easeInOut");
+        this.cameras.main.zoomTo(1, 1000, "Cubic.easeInOut");
+      });
+
+      // ---- the laughing van (IMG-050) ----
+      this.at(TIMES.laugh - t0, () => {
+        this.tweens.add({ targets: panel, alpha: 0, duration: 500, onComplete: () => panel.destroy() });
+        const bg = this.placed("nv_laugh").setAlpha(0);
+        // the van and its speed lines jog together, on the spot
+        const v = L.nv_hahavan;
+        const vt = this.textures.get("nv_hahavan").getSourceImage();
+        const vx = v.x + vt.width / 2, vy = v.y + vt.height / 2;
+        const body = this.add.image(0, 0, "nv_hahavan");
+        const lines = this.add.image(L.nv_haspeed.x - vx, L.nv_haspeed.y - vy, "nv_haspeed").setOrigin(0);
+        const van = this.add.container(vx, vy, [lines, body]).setAlpha(0);
+        this.tweens.add({ targets: van, y: vy - 8, duration: 100, ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+        this.tweens.add({ targets: lines, x: lines.x + 10, alpha: 0.4, duration: 100, yoyo: true, repeat: -1 });
+        // all the HA HA HAs shake with laughter
+        const ha = this.middle(this.placed("nv_ha")).setAlpha(0);
+        this.tweens.add({ targets: ha, scale: 1.04, angle: { from: -1.5, to: 1.5 }, duration: 140, yoyo: true,
+                          repeat: -1 });
+        this.tweens.add({ targets: [bg, van, ha], alpha: 1, duration: 500 });
+        RightSounds.haha();
+        this.loops.push(this.time.addEvent({ delay: 2200, loop: true, callback: () => RightSounds.haha() }));
       });
     }
   }

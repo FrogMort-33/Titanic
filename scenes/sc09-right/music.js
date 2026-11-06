@@ -26,6 +26,12 @@
 //    RightSounds.rev()            VROOM: the engine revs up again
 //    RightSounds.worry()          a wobbly "uh-oh" for worried Enda
 //
+//   THE AWARD AND THE WRONG ROAD
+//    RightSounds.fanfare()        a proud trumpety "da-da-da DAAA!" for the award
+//    RightSounds.chatter(s, p)    8-bit "talking" babble for s seconds
+//                                 (p = pitch: 1 is normal, higher is squeakier)
+//    RightSounds.haha()           "HA HA HA HA!" - the van laughing
+//
 //  (Called "RightSounds" so it can share a page with the other
 //   episodes' sounds on the "Play all" page.)
 // =====================================================================
@@ -343,6 +349,41 @@ const RightSounds = (() => {
       g.gain.linearRampToValueAtTime(0.2, t + 0.06);
       g.gain.exponentialRampToValueAtTime(0.001, t + 0.85);
       o.connect(low).connect(g).connect(out); o.start(t); o.stop(t + 0.9);
+    },
+
+    // A fanfare: three quick notes, then a long one, with a chord under it
+    fanfare() {
+      wake();
+      [[HZ.G5, 0, 0.12], [HZ.G5, 0.14, 0.12], [HZ.G5, 0.28, 0.12], [HZ.C6, 0.42, 1.1]].forEach(([f, when, len]) =>
+        beep(f, when, len, "square", 0.07));
+      for (const f of [HZ.C5, HZ.E5, HZ.G5]) beep(f, 0.42, 1.1, "triangle", 0.06);
+    },
+
+    // Talking: lots of short random notes close to one pitch (like
+    // cartoon characters babbling). Every so often a little gap, like
+    // between words.
+    chatter(seconds = 2, pitch = 1) {
+      wake();
+      for (let t = 0; t < seconds; t += 0.09) {
+        if (Math.random() < 0.15) continue;                      // a gap between "words"
+        const f = (300 + Math.random() * 180) * pitch;
+        beep(f, t, 0.07, "square", 0.035);
+      }
+    },
+
+    // Laughing: "HA HA HA HA" - four bouncy notes, each a bit lower
+    haha() {
+      wake();
+      [523, 494, 466, 440, 415].forEach((f, i) => {
+        const t = ctx.currentTime + i * 0.2;
+        const o = ctx.createOscillator(); o.type = "square";
+        o.frequency.setValueAtTime(f * 1.25, t);                // each "HA" starts high...
+        o.frequency.exponentialRampToValueAtTime(f, t + 0.12);  // ...and drops
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.07, t);
+        g.gain.linearRampToValueAtTime(0, t + 0.16);
+        o.connect(g).connect(out); o.start(t); o.stop(t + 0.18);
+      });
     },
 
     // a wobbly, sliding-down "uh-ohhh"
