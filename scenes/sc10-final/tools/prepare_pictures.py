@@ -290,6 +290,157 @@ layout["fd_later"] = [pic.pt(210, 112)[0] + pic.x, pic.pt(210, 112)[1] + pic.y] 
 PATH = [(730, 805), (590, 640), (405, 440), (235, 290), (40, 215)]
 layout["fd_path"] = [[pic.pt(x, y)[0] + pic.x, pic.pt(x, y)[1] + pic.y] for x, y in PATH]
 
+# =====================================================================
+#  PART 2: THE TOLL BOOTH (IMG-057, masters 21_2.jpg and 21_3.jpg)
+# =====================================================================
+def disc_patch(p, name, centre, r):
+    """A round patch that can turn in place (a steering wheel)"""
+    b = p.pbox((centre[0] - r, centre[1] - r, centre[0] + r, centre[1] + r))
+    m = Image.new("L", (b[2] - b[0], b[3] - b[1]), 0)
+    ImageDraw.Draw(m).ellipse((1, 1, m.width - 2, m.height - 2), fill=255)
+    save_png(name, p.img.crop(b), np.asarray(m.filter(ImageFilter.GaussianBlur(1)), np.float32))
+    p.place(name, b[0], b[1])
+
+def round_patch(p, name, box):
+    """A soft-edged oval patch (a mouth that stretches to talk)"""
+    b = p.pbox(box)
+    m = Image.new("L", (b[2] - b[0], b[3] - b[1]), 0)
+    ImageDraw.Draw(m).ellipse((1, 1, m.width - 2, m.height - 2), fill=255)
+    save_png(name, p.img.crop(b), np.asarray(m.filter(ImageFilter.GaussianBlur(1.5)), np.float32))
+    p.place(name, b[0], b[1])
+
+def paper_fill(p, hole, grow_by=11):
+    """Rub out everything in 'hole' with the plain paper around it: the
+    paper's colour is smudged in from clean paper NEAR the hole (so it
+    matches the light and shade there), with a little paper grain."""
+    big = grow(hole, grow_by)
+    soft = np.asarray(Image.fromarray(np.clip(big, 0, 255).astype(np.uint8))
+                      .filter(ImageFilter.GaussianBlur(2)), np.float32)[..., None] / 255
+    lowsat = (p.rgb.max(axis=2) - p.rgb.min(axis=2)) < 45
+    good = ((grow(big, 9) < 10) & (p.ink < 25) & lowsat).astype(np.float32)
+    fill = fill_holes(p.rgb, good)
+    fill = np.asarray(Image.fromarray(np.clip(fill, 0, 255).astype(np.uint8))
+                      .filter(ImageFilter.GaussianBlur(6)), np.float32)
+    fill = fill + rng.normal(0, 2.5, fill.shape[:2])[..., None]
+    return Image.fromarray(np.clip(p.rgb * (1 - soft) + fill * soft, 0, 255).astype(np.uint8))
+
+def box_hole(p, box):
+    """a hole the shape of a box (working-copy points)"""
+    h = np.zeros_like(p.ink)
+    b = p.pbox(box)
+    h[b[1]:b[3], b[0]:b[2]] = 255
+    return h
+
+def whole(p, name):
+    """Save a picture as it is, as a jpg, and remember where it goes"""
+    p.img.save(OUT / (name + ".jpg"), quality=90)
+    p.place(name, 0, 0)
+    layout[name]["w"], layout[name]["h"] = p.img.size
+    print(name + ".jpg", p.img.size)
+
+# ---- "ONE HOUR LATER" (big) ----
+whole(Picture("21_2.jpg", 0, (475, 85, 978, 378), W - 80, H - 80), "tb_later")
+
+# ---- the toll booth: the barrier, the ticket, the hand and the van are
+#      cut out so they can move; behind them, plain paper ----
+tb = Picture("21_2.jpg", 0, (40, 82, 476, 380), W - 60, H - 60)
+ARM = [(118, 120), (185, 99), (300, 83), (472, 74), (477, 93), (340, 112), (230, 137), (160, 167), (118, 188)]
+tb.hole = np.zeros_like(tb.ink)
+for name, outline in [
+        ("tb_arm", ARM),
+        ("tb_ticket", [(112, 200), (154, 200), (154, 228), (112, 228)]),
+        ("tb_hand", [(166, 204), (180, 198), (220, 198), (220, 238), (180, 234), (166, 224)]),
+        ("tb_van", [(198, 152), (409, 146), (412, 318), (406, 366), (338, 367), (334, 334), (294, 334),
+                    (292, 367), (214, 367), (205, 320)])]:
+    a = polygon_mask(tb.img.size, [tb.pt(x, y) for x, y in outline], 1.0)
+    ys, xs = np.nonzero(a > 10)
+    b = (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)
+    save_png(name, tb.img.crop(b), a[b[1]:b[3], b[0]:b[2]])
+    tb.place(name, b[0], b[1])
+    tb.hole = np.maximum(tb.hole, a)
+layout["tb_pivot"] = [tb.pt(122, 157)[0] + tb.x, tb.pt(122, 157)[1] + tb.y]   # where the barrier turns
+booth = paper_fill(tb, tb.hole, 15)
+booth.save(OUT / "tb_booth.jpg", quality=90)
+tb.place("tb_booth", 0, 0)
+layout["tb_booth"]["w"], layout["tb_booth"]["h"] = booth.size
+print("tb_booth.jpg", booth.size)
+
+# ---- inside the van: "The strict instruction was DON'T lose the ticket" /
+#      "Oh, shit." - and "Delirious laughter continued." below ----
+iv = Picture("21_2.jpg", 0, (470, 385, 988, 668), W - 100, 600, at_y=20)
+round_patch(iv, "tb_mouth_mid", (677, 597, 697, 622))
+round_patch(iv, "tb_mouth_enda", (786, 612, 818, 634))
+disc_patch(iv, "tb_wheel_iv", (798, 648), 10)
+iv.words("tb_strict", (678, 392, 982, 506), INKC)
+iv.words("tb_ohshit", (855, 528, 962, 598), INKC)
+whole_iv = paper_fill(iv, np.maximum(box_hole(iv, (676, 390, 984, 508)), box_hole(iv, (853, 526, 964, 600))), 5)
+whole_iv.save(OUT / "tb_inside.jpg", quality=90)
+iv.place("tb_inside", 0, 0)
+layout["tb_inside"]["w"], layout["tb_inside"]["h"] = whole_iv.size
+dl = Picture("21_2.jpg", 0, (90, 470, 375, 565), 560, 190, at_y=660)
+dl.words("tb_delirious", (90, 470, 375, 565), INKC)
+
+# ---- the three little frames, one at a time, each full screen ----
+f1 = Picture("21_3.jpg", 0, (15, 352, 347, 708), W - 80, H - 40)
+round_patch(f1, "tb_mouth_q", (232, 535, 255, 558))
+disc_patch(f1, "tb_wheel_1", (127, 443), 19)
+f1.words("tb_say_q", (14, 660, 312, 708), INKC)            # "Rhianna, how are you?"
+paper1 = paper_fill(f1, box_hole(f1, (12, 658, 314, 708)), 5)
+paper1.save(OUT / "tb_frame1.jpg", quality=90); f1.place("tb_frame1", 0, 0)
+layout["tb_frame1"]["w"], layout["tb_frame1"]["h"] = paper1.size
+
+f2 = Picture("21_3.jpg", 0, (345, 335, 672, 700), W - 80, H - 40)
+round_patch(f2, "tb_mouth_r", (470, 482, 550, 515))
+f2.words("tb_say_r", (366, 655, 622, 698), INKC)           # "Reading for my life"
+paper2 = paper_fill(f2, box_hole(f2, (362, 652, 625, 700)), 5)
+paper2.save(OUT / "tb_frame2.jpg", quality=90); f2.place("tb_frame2", 0, 0)
+layout["tb_frame2"]["w"], layout["tb_frame2"]["h"] = paper2.size
+
+f3 = Picture("21_3.jpg", 0, (652, 322, 998, 672), W - 80, H - 40)
+disc_patch(f3, "tb_wheel_3", (786, 367), 17)
+f3.words("tb_brow_l", (836, 444, 877, 464), INKC)          # his eyebrows (they wiggle)
+f3.words("tb_dots", (780, 650, 830, 668), INKC)            # "..."
+face = mend(f3, grow(f3.hole, 5))
+f3.rgb = np.asarray(face, np.float32)
+face.save(OUT / "tb_frame3.jpg", quality=90); f3.place("tb_frame3", 0, 0)
+layout["tb_frame3"]["w"], layout["tb_frame3"]["h"] = face.size
+
+# =====================================================================
+#  PART 3: EURO TRUCK SIMULATOR (IMG-060, master 21_4.jpg)
+#  The lorries are cut out (they drive past in a never-ending stream);
+#  behind them the picture is rebuilt: the buildings and sky carried
+#  straight DOWN to the road, and the road carried straight UP.
+#  (fd_bus.png is our usual van, copied from episode 1 via episode 9.)
+# =====================================================================
+ets = Picture("21_4.jpg", 0, (80, 85, 965, 640), W, H - 20)
+for name, outline in [
+        ("et_pink", [(95, 400), (252, 398), (254, 488), (248, 514), (93, 514)]),
+        ("et_blue", [(314, 351), (522, 351), (524, 398), (562, 398), (600, 436), (604, 490), (592, 518), (316, 518)]),
+        ("et_red", [(624, 351), (810, 351), (812, 396), (847, 396), (887, 430), (892, 502), (872, 513), (626, 515)])]:
+    ets.solid(name, (min(x for x, _ in outline) - 2, min(y for _, y in outline) - 2,
+                     max(x for x, _ in outline) + 2, max(y for _, y in outline) + 2), outline)
+layout["et_lane"] = ets.pt(0, 514)[1] + ets.y          # where the wheels touch the road
+# the band where the lorries were, all the way across
+top, road, bottom = ets.pt(0, 346)[1], ets.pt(0, 440)[1], ets.pt(0, 522)[1]
+rgb = ets.rgb.copy()
+above = rgb[top - 14:top - 3].mean(axis=0)              # the row of colours just above the band
+below = rgb[bottom + 3:bottom + 14].mean(axis=0)        # ...and just below it (the road)
+for y in range(top, bottom):
+    rgb[y] = above if y < road else below
+rgb[top:bottom] += rng.normal(0, 4, rgb[top:bottom].shape[:2])[..., None]    # crayon grain
+# (a soft join at the top and bottom of the band)
+soft = np.zeros(rgb.shape[:2], np.float32)
+soft[top:bottom] = 1
+soft = np.asarray(Image.fromarray((soft * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(3)),
+                  np.float32)[..., None] / 255
+town = Image.fromarray(np.clip(ets.rgb * (1 - soft) + rgb * soft, 0, 255).astype(np.uint8))
+# the line along the bottom of the buildings
+ImageDraw.Draw(town).line([ets.pt(95, 440), ets.pt(960, 440)], fill=(120, 120, 110), width=2)
+town.save(OUT / "et_town.jpg", quality=90)
+ets.place("et_town", 0, 0)
+layout["et_town"]["w"], layout["et_town"]["h"] = town.size
+print("et_town.jpg", town.size)
+
 (SCENE / "layout.js").write_text(
     "// Made by tools/prepare_pictures.py - do not edit by hand.\n"
     "window.LAYOUT10 = " + json.dumps(layout, indent=1) + ";\n")

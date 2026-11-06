@@ -24,7 +24,30 @@
 //         into the distance. (phew!)
 //         The truck bops on... and near the top its logs slide off the
 //         back, one by one, and PLOP onto the road. The truck drives off.
-//   37    Fade out.
+//         Hold for 5...
+//
+//   PART 2 - THE TOLL BOOTH  (IMG-057)  - the happy country tune again
+//   38.5  "ONE HOUR LATER" (big)...
+//   42    ...fades to the toll booth, the barrier DOWN.
+//   43.5  The van bops in from the right and stops at the booth.
+//   47.5  POP! the ticket comes out; a hand comes out of the van and takes it.
+//   50.5  The barrier goes UP...
+//   52    ...and the van bops off out of the picture.
+//   56    Inside the van. The middle potato: "The strict instruction was
+//         DON'T lose the ticket"...
+//   62    ...Enda: "Oh, shit."
+//   65    "Delirious laughter continued." (ha ha ha)
+//   71    One little picture at a time: "Rhianna, how are you?"
+//   77    Rhianna: "Reading for my life". Hold for 5...
+//   85    ...back to him, confused: eyebrows going, "..."
+//
+//   PART 3 - EURO TRUCK SIMULATOR, French Village Edition  (IMG-060)
+//   92    Clear screen. A never-ending stream of lorries bops slowly past,
+//         left to right (beep beep!): as one goes off the right, another
+//         comes in on the left...
+//  102    ...then, from the left, our van SPEEDS across (the Valkyries)...
+//  105.5  ...and is gone. Hold...
+//  109    Fade out.
 //
 //  To change WHEN things happen, change the numbers in TIMES below.
 //  To change how FAST the vehicles go, change SPEED below.
@@ -44,7 +67,26 @@
     aaah: 20.5,           // Enda: "AAAAH!!!"
     floorIt: 23.5,        // "FLOOR IT!"
     overtake: 24.5,       // the van overtakes and is gone
-    fadeOut: 37,
+    // PART 2 - the toll booth
+    later2: 38.5,         // "ONE HOUR LATER"
+    booth: 42,            // the toll booth, barrier down
+    vanIn2: 43.5,         // the van bops in...
+    vanStop: 46.5,        // ...and stops
+    ticket: 47.5,         // the ticket pops out, the hand takes it
+    raise: 50.5,          // the barrier goes up
+    vanOut2: 52,          // the van bops away
+    inside: 56,           // inside the van
+    strict: 57.5,         // "The strict instruction was DON'T lose the ticket"
+    ohShit: 62,           // "Oh, shit."
+    laughter: 65,         // "Delirious laughter continued."
+    rhianna: 71,          // "Rhianna, how are you?"
+    reading: 77,          // "Reading for my life"
+    confused: 85,         // back to him, confused
+    // PART 3 - the lorries
+    convoy: 92,           // the stream of lorries
+    zoom: 102,            // our van speeds across...
+    zoomGone: 105.5,      // ...and is off the right-hand side by now
+    fadeOut: 109,
   };
 
   const SPEED = {         // in screen pixels per second, along the road
@@ -95,6 +137,13 @@
       const packed = window.ASSETS || {};
       const pic = (key, file) => this.load.image(key, packed[key] || "assets/" + file);
       pic("fd_road", "fd_road.jpg");
+      for (const key of ["tb_later", "tb_booth", "tb_inside", "tb_frame1", "tb_frame2", "tb_frame3"]) pic(key, key + ".jpg");
+      pic("et_town", "et_town.jpg");
+      for (const key of ["et_pink", "et_blue", "et_red", "fd_bus"]) pic(key, key + ".png");
+      for (const key of ["tb_arm", "tb_ticket", "tb_hand", "tb_van", "tb_mouth_mid", "tb_mouth_enda", "tb_wheel_iv",
+                         "tb_strict", "tb_ohshit", "tb_delirious", "tb_mouth_q", "tb_wheel_1", "tb_say_q", "tb_mouth_r",
+                         "tb_say_r", "tb_wheel_3", "tb_brow_l", "tb_dots"])
+        pic(key, key + ".png");
       for (const key of ["fd_truck", "fd_log1", "fd_log2", "fd_log3", "fd_log4", "fd_van", "fd_aaaah", "fd_aaah",
                          "fd_floor", "fd_phew", "fd_top", "fd_speech", "fd_mouth"])
         pic(key, key + ".png");
@@ -127,8 +176,53 @@
       return [L[key].x + tex.width / 2, L[key].y + tex.height / 2];
     }
 
+    // A "cut": clear the screen for the next picture
+    cut() {
+      this.tweens.killAll();
+      this.children.removeAll(true);
+      (this.loops || []).forEach((job) => job.remove());   // stop repeating jobs
+      this.loops = [];
+      this.onTick = null;
+      this.cameras.main.resetFX();
+      this.cameras.main.fadeIn(500);
+    }
+
+    // Talking: the mouth stretches open and shut for 'secs' (only ever
+    // BIGGER than the drawing, so it always covers it), with 8-bit chatter.
+    talk(mouth, secs, pitch) {
+      mouth.setOrigin(0.5, 0.3);
+      const flaps = Math.round(secs * 1000 / 220);
+      this.tweens.add({ targets: mouth, scaleY: 1.7, scaleX: 1.1, duration: 110, ease: "Sine.easeInOut",
+                        yoyo: true, repeat: flaps - 1 });
+      FinalSounds.chatter(secs, pitch);
+    }
+
+    // A picture from layout.js with its middle as its handle (so it can
+    // stretch or turn round its middle) - it doesn't move
+    middled(key) {
+      const img = this.placed(key);
+      return img.setOrigin(0.5).setPosition(img.x + img.width / 2, img.y + img.height / 2);
+    }
+
+    // Words pop up
+    pop(key) {
+      const words = this.middled(key);
+      this.tweens.add({ targets: words, scale: { from: 0.4, to: 1 }, alpha: { from: 0, to: 1 }, duration: 300,
+                        ease: "Back.easeOut" });
+      return words;
+    }
+
+    // A steering wheel turning left and right
+    steer(key) {
+      const wheel = this.middled(key);
+      this.tweens.add({ targets: wheel, angle: { from: -25, to: 25 }, duration: 900, ease: "Sine.easeInOut",
+                        yoyo: true, repeat: -1 });
+      return wheel;
+    }
+
     start() {
       const cam = this.cameras.main;
+      this.loops = [];
 
       // ---- the picture, with the road cleared, and a "mask" so the
       //      vehicles are only seen inside the picture ----
@@ -178,10 +272,24 @@
       this.at(TIMES.truckIn, () => this.startTruck());
       this.at(TIMES.vanIn, () => this.startVan());
 
+      // ---- PART 2: the toll booth ----
+      this.at(TIMES.later2 - 1, () => {
+        FinalSounds.valkyriesOff(1);
+        FinalSounds.engineOff(1);
+        cam.fadeOut(900, 0, 0, 0);
+      });
+      this.at(TIMES.later2, () => { this.cut(); this.showTollBooth(); });
+      this.at(TIMES.inside - 0.6, () => cam.fadeOut(500, 0, 0, 0));
+      this.at(TIMES.inside, () => { this.cut(); this.showInside(); });
+      this.at(TIMES.rhianna - 0.6, () => cam.fadeOut(500, 0, 0, 0));
+      this.at(TIMES.rhianna, () => { this.cut(); this.showFrames(); });
+      this.at(TIMES.convoy - 0.6, () => cam.fadeOut(500, 0, 0, 0));
+      this.at(TIMES.convoy, () => { this.cut(); this.showConvoy(); });
+
       // ---- the end ----
       this.at(TIMES.fadeOut, () => {
+        FinalSounds.pastoralOff(2.5);
         FinalSounds.valkyriesOff(2.5);
-        FinalSounds.engineOff(2);
         cam.fadeOut(2500, 0, 0, 0);
         cam.once("camerafadeoutcomplete", () => showEnd());   // in index.html / play-all.html
       });
@@ -326,6 +434,230 @@
           });
           this.time.delayedCall(260, () => FinalSounds.boop());
         });
+      });
+    }
+
+    // =====================================================================
+    //  PART 2 - THE TOLL BOOTH
+    // =====================================================================
+    showTollBooth() {
+      const t0 = TIMES.later2;                            // this part's start
+      const cam = this.cameras.main;
+      FinalSounds.pastoral(TIMES.fadeOut - t0 + 3);       // happy and carefree again
+      const later = this.placed("tb_later");
+
+      // fade to the toll booth
+      this.at(TIMES.booth - t0 - 0.6, () => cam.fadeOut(500, 0xf4, 0xea, 0xac));
+      this.at(TIMES.booth - t0, () => {
+        later.destroy();
+        cam.fadeIn(500, 0xf4, 0xea, 0xac);
+        const box = L.tb_booth;
+        this.placed("tb_booth");
+        // everything that moves is only seen inside the picture (a "mask")
+        const shape = this.make.graphics({ add: false });
+        shape.fillStyle(0xffffff).fillRect(box.x, box.y, box.w, box.h);
+        const inside = shape.createGeometryMask();
+
+        // the ticket (hidden until it pops out) and the hand (hidden
+        // inside the van until it reaches out) - both BEHIND the van
+        const ticket = this.middled("tb_ticket").setScale(0).setMask(inside);
+        const hand = this.placed("tb_hand").setMask(inside);
+        const handX = hand.x;
+        hand.x += 130;                                    // tucked inside the van
+        // the van: starts off the right-hand side
+        const van = this.placed("tb_van").setMask(inside);
+        const vanX = van.x;
+        van.x = box.x + box.w + 20;
+        hand.setVisible(false);
+        // the barrier, turning round its end at the booth. It's drawn UP;
+        // we start it DOWN (turned 17 degrees), across the front of the van
+        const arm = this.placed("tb_arm");
+        const [px, py] = L.tb_pivot;
+        arm.setOrigin((px - arm.x) / arm.width, (py - arm.y) / arm.height).setPosition(px, py);
+        arm.angle = 17;
+
+        // the van bops in and stops at the booth
+        const bop = this.tweens.add({ targets: van, y: van.y - 6, duration: 130, yoyo: true, repeat: -1 });
+        FinalSounds.engine(TIMES.vanOut2 - TIMES.booth + 4);
+        this.at(TIMES.vanIn2 - TIMES.booth, () => {
+          this.tweens.add({ targets: van, x: vanX, duration: (TIMES.vanStop - TIMES.vanIn2) * 1000, ease: "Sine.easeOut" });
+        });
+
+        // POP: the ticket comes out of the slot...
+        this.at(TIMES.ticket - TIMES.booth, () => {
+          this.tweens.add({ targets: ticket, scale: 1, duration: 350, ease: "Back.easeOut" });
+          FinalSounds.pop();
+        });
+        // ...a hand comes out of the van, takes it, and goes back in
+        this.at(TIMES.ticket - TIMES.booth + 0.6, () => {
+          hand.setVisible(true);
+          this.tweens.add({ targets: hand, x: handX - 35, duration: 600, ease: "Sine.easeOut" });
+        });
+        this.at(TIMES.ticket - TIMES.booth + 1.5, () => {
+          FinalSounds.boop();
+          this.tweens.add({ targets: [hand, ticket], x: "+=170", duration: 700, ease: "Sine.easeIn",
+                            onComplete: () => { hand.setVisible(false); ticket.setVisible(false); } });  // (in the van now)
+        });
+
+        // the barrier goes UP (beep beep, creak)
+        this.at(TIMES.raise - TIMES.booth, () => {
+          FinalSounds.honk(1.4);
+          FinalSounds.squeeze();
+          this.tweens.add({ targets: arm, angle: -6, duration: 1000, ease: "Back.easeOut" });
+        });
+        // the van bops off out of the picture (to the left)
+        this.at(TIMES.vanOut2 - TIMES.booth, () => {
+          FinalSounds.rev();
+          this.tweens.add({ targets: [van, hand, ticket], x: `-=${van.x - box.x + van.width + 40}`, duration: 3000,
+                            ease: "Sine.easeIn" });
+        });
+      });
+    }
+
+    // Inside the van: the three front seats
+    showInside() {
+      const t0 = TIMES.inside;                            // this part's start
+      // the picture and its moving bits go in one container, which bops along
+      const panel = this.add.container(0, 0);
+      panel.add(this.placed("tb_inside"));
+      const midMouth = this.middled("tb_mouth_mid"), endaMouth = this.middled("tb_mouth_enda");
+      panel.add([midMouth, endaMouth, this.steer("tb_wheel_iv")]);
+      this.tweens.add({ targets: panel, y: -5, duration: 420, ease: "Sine.easeInOut", yoyo: true, repeat: -1 });
+
+      this.at(TIMES.strict - t0, () => {
+        panel.add(this.pop("tb_strict"));
+        this.talk(midMouth, 3.5, 1.2);
+      });
+      this.at(TIMES.ohShit - t0, () => {
+        panel.add(this.pop("tb_ohshit"));
+        this.talk(endaMouth, 1.0, 0.8);
+      });
+      // "Delirious laughter continued." - and lots of it
+      this.at(TIMES.laughter - t0, () => {
+        const words = this.pop("tb_delirious");
+        this.tweens.add({ targets: words, angle: { from: -2, to: 2 }, duration: 160, yoyo: true, repeat: -1 });
+        FinalSounds.haha();
+        this.loops.push(this.time.addEvent({ delay: 1200, loop: true, callback: () => FinalSounds.haha() }));
+      });
+    }
+
+    // The three little pictures, one at a time, full screen
+    showFrames() {
+      const t0 = TIMES.rhianna;                           // this part's start
+      // 1) "Rhianna, how are you?"
+      let frame = [this.placed("tb_frame1"), this.steer("tb_wheel_1")];
+      const mouthQ = this.middled("tb_mouth_q");
+      frame.push(mouthQ);
+      this.at(1.2, () => { frame.push(this.pop("tb_say_q")); this.talk(mouthQ, 2, 1.0); });
+
+      // a quick swap to the next picture
+      const swap = (build) => {
+        this.cameras.main.flash(200, 255, 255, 255);
+        frame.forEach((f) => f.destroy());
+        frame = build();
+      };
+      // 2) Rhianna: "Reading for my life"
+      this.at(TIMES.reading - t0, () => swap(() => {
+        const mouthR = this.middled("tb_mouth_r");
+        const f = [this.placed("tb_frame2"), mouthR];
+        this.children.bringToTop(mouthR);
+        this.time.delayedCall(1000, () => { f.push(this.pop("tb_say_r")); this.talk(mouthR, 2, 1.35); });
+        return f;
+      }));
+      // 3) back to him, confused: his eyebrow goes up and down and wiggles, "..."
+      this.at(TIMES.confused - t0, () => swap(() => {
+        const brow = this.middled("tb_brow_l");
+        const f = [this.placed("tb_frame3"), this.steer("tb_wheel_3"), brow];
+        this.children.bringToTop(brow);
+        this.tweens.add({ targets: brow, y: brow.y - 14, duration: 350, ease: "Sine.easeInOut", yoyo: true,
+                          repeat: -1, repeatDelay: 300 });
+        this.tweens.add({ targets: brow, angle: { from: -10, to: 12 }, duration: 260, ease: "Sine.easeInOut",
+                          yoyo: true, repeat: -1 });
+        // "..." one dot at a time
+        const dots = this.placed("tb_dots");
+        f.push(dots);
+        const shown = { w: 0 };
+        dots.setCrop(0, 0, 0, dots.height);
+        this.tweens.add({ targets: shown, w: dots.width, duration: 1800, delay: 800, ease: "Stepped",
+                          easeParams: [3], onUpdate: () => dots.setCrop(0, 0, shown.w, dots.height) });
+        FinalSounds.worry();
+        return f;
+      }));
+    }
+
+    // =====================================================================
+    //  PART 3 - EURO TRUCK SIMULATOR: a never-ending stream of lorries
+    // =====================================================================
+    showConvoy() {
+      const t0 = TIMES.convoy;                            // this part's start
+      const box = L.et_town;
+      this.placed("et_town");
+      const shape = this.make.graphics({ add: false });
+      shape.fillStyle(0xffffff).fillRect(box.x, box.y, box.w, box.h);
+      const inside = shape.createGeometryMask();        // (only seen inside the picture)
+
+      // The lorries take turns: blue, red, pink, blue, red, pink...
+      const kinds = ["et_blue", "et_red", "et_pink"];
+      let next = 0;
+      const lorries = [];
+      const SLOW = 85;                                    // pixels a second
+      const SPACE = 60;                                   // gap between one lorry and the next
+      const lane = L.et_lane;                             // where the wheels touch the road
+      const addLorry = (x) => {
+        const key = kinds[next++ % kinds.length];
+        const img = this.add.image(x, lane, key).setOrigin(0, 1).setMask(inside);
+        img.bop = Math.random() * 6;                      // (each bops a bit differently)
+        lorries.push(img);
+        return img;
+      };
+      // start with the road already full of lorries
+      let x = box.x + box.w;
+      while (x > box.x - 300) {
+        const lorry = addLorry(0);
+        x -= lorry.width + SPACE;
+        lorry.x = x;
+      }
+
+      // every frame: move them all along; when one has gone off the right,
+      // throw it away; when there's room on the left, bring in a new one
+      this.onTick = (now, dt) => {
+        for (const lorry of lorries) {
+          lorry.x += SLOW * dt;
+          lorry.y = lane - Math.abs(Math.sin(now * 7 + lorry.bop)) * 4;     // bop bop bop
+        }
+        while (lorries.length && lorries[0].x > box.x + box.w) lorries.shift().destroy();
+        const last = lorries[lorries.length - 1];
+        if (!last || last.x > box.x - 200) {
+          const lorry = addLorry(0);
+          lorry.x = (last ? last.x : box.x) - lorry.width - SPACE;
+        }
+        if (this.bus) this.bus.y = lane + 40 - Math.abs(Math.sin(now * 14)) * 5;
+      };
+      // beep beep! now and then
+      this.loops.push(this.time.addEvent({ delay: 1700, loop: true, callback: () => {
+        FinalSounds.honk(1.3);
+        this.time.delayedCall(220, () => FinalSounds.honk(1.3));
+      } }));
+
+      // ---- our van SPEEDS across, in front, left to right ----
+      this.at(TIMES.zoom - t0, () => {
+        FinalSounds.pastoralOff(1);
+        FinalSounds.valkyries(TIMES.fadeOut - TIMES.zoom + 2);
+        const bus = this.add.image(box.x - 300, lane + 40, "fd_bus").setOrigin(0.5, 1).setScale(0.5).setMask(inside);
+        this.bus = bus;
+        this.tweens.add({ targets: bus, x: box.x + box.w + 300, duration: (TIMES.zoomGone - TIMES.zoom) * 1000,
+                          ease: "Sine.easeIn" });
+        FinalSounds.whoosh();
+        FinalSounds.rev();
+        // dust puffs behind it
+        const dust = this.time.addEvent({ delay: 70, loop: true, callback: () => {
+          const puff = this.add.circle(bus.x - bus.displayWidth / 2, bus.y - 12, 8 + Math.random() * 10, 0xd8cfa0)
+            .setAlpha(0.8).setMask(inside);
+          this.tweens.add({ targets: puff, x: puff.x - 60, y: puff.y - 25, scale: 2, alpha: 0, duration: 600,
+                            onComplete: () => puff.destroy() });
+        } });
+        this.loops.push(dust);
+        this.at(TIMES.zoomGone - TIMES.zoom + 0.3, () => dust.remove());
       });
     }
   }
