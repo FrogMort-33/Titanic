@@ -7,6 +7,7 @@ prepare_pictures.py  -  cut the pictures for EPISODE 9 "Drive on your other Righ
   PANEL 3  "Random tyre"             IMG-039 (master 17_3.jpg), the middle
                                      picture: the van, the tyre, the scuff, and
                                      the words "Random tyre hitting the car"
+  PANEL 4  "It'll come off in the wash!"  IMG-039, the right-hand picture
 
 Makes, in ../assets/:
   rt_later.jpg      "One hour later" with the balloons and trophy
@@ -17,6 +18,7 @@ Makes, in ../assets/:
   rt_lump.png       just the lump of tyre (bouncing off)
   rt_scuff.png      the scuff mark it leaves on the van
   rt_words.png      the arrow and "Random tyre hitting the car"
+  rt_wash.jpg       Spud Enda: "It'll come off in the wash!"
   (rt_bus.png is the bus from episode 1, for crossing the screen)
 
 And layout.js (window.LAYOUT9): where everything goes, in screen pixels.
@@ -276,6 +278,12 @@ print("rt_blank.jpg", blank.size)
 # The words under it, with their arrow
 wd = Picture("17_3.jpg", 0, (466, 643, 978, 697), W - 300, 120, at_y=H - 150)
 wd.words("rt_words", (466, 643, 978, 697), INKC)
+
+# =====================================================================
+#  PANEL 4: "It'll come off in the wash!" (IMG-039, the right-hand picture)
+# =====================================================================
+wash = Picture("17_3.jpg", 0, (637, 312, 988, 646), W - 120, H - 80)
+wash.save_on_paper("rt_wash")
 
 (SCENE / "layout.js").write_text(
     "// Made by tools/prepare_pictures.py - do not edit by hand.\n"

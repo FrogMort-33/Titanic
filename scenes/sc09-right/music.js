@@ -7,6 +7,8 @@
 //    RightSounds.valkyries(secs)  our 8-bit "Ride of the Valkyries" - the
 //                                 SAME tune Enda approved for episode 1
 //    RightSounds.valkyriesOff(s)  fade it away
+//    RightSounds.pastoral(secs)   the happy 8-bit country tune from episode 8
+//    RightSounds.pastoralOff(s)   fade it away
 //    RightSounds.tada()           "ta-DA!" for the pop-up picture
 //    RightSounds.pop()            a quick "bloop" as something pops up
 //    RightSounds.engine(secs)     the van's engine ticking over: brrrrm
@@ -24,6 +26,7 @@ const RightSounds = (() => {
   let out = null;          // volume knob for this episode
   let tuneVol = null;      // volume knob for the Valkyries
   let engineVol = null;    // volume knob for the engine
+  let countryVol = null;   // volume knob for the country tune
 
   function wake() {
     // One shared audio engine for the whole page (iPad only lets a tap
@@ -80,6 +83,73 @@ const RightSounds = (() => {
     return 3 * BEAT;
   }
 
+  // A FLUTE-ish note: a soft "triangle" wave that fades in gently, with a
+  // little wobble in its pitch (vibrato), like a real player's breath.
+  function flute(freq, when, length, vol, to) {
+    const t = ctx.currentTime + when;
+    const osc = ctx.createOscillator(); osc.type = "triangle"; osc.frequency.value = freq;
+    const wobble = ctx.createOscillator(), depth = ctx.createGain();
+    wobble.frequency.value = 5.5; depth.gain.value = freq * 0.008;
+    wobble.connect(depth).connect(osc.frequency);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.04);        // a breathy start
+    g.gain.setValueAtTime(vol, t + length * 0.8);
+    g.gain.linearRampToValueAtTime(0, t + length);
+    osc.connect(g).connect(to || out);
+    osc.start(t); wobble.start(t); osc.stop(t + length + 0.02); wobble.stop(t + length + 0.02);
+  }
+
+  // Note names -> pitch (Hz) for the country tune (every note, octaves 2-6)
+  const HZ2 = {};
+  ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "Bb", "B"].forEach((n, i) => {
+    for (let octave = 2; octave <= 6; octave++) HZ2[n + octave] = 440 * Math.pow(2, octave - 4 + (i - 9) / 12);
+  });
+
+  // ---- OUR COUNTRY TUNE (original, written for this episode) ----------
+  // In G major, in a lilting "6/8" time: each bar has 6 little beats,
+  // counted ONE-two-three FOUR-five-six, like a skipping walk.
+  // Each note is [name, how many little beats it lasts]. Each bar adds up to 6.
+  const MELODY = [
+    ["G4", 2], ["B4", 1], ["D5", 2], ["B4", 1],     // bar 1
+    ["C5", 2], ["E5", 1], ["D5", 3],                // bar 2
+    ["B4", 2], ["G4", 1], ["A4", 2], ["B4", 1],     // bar 3
+    ["A4", 3], ["D4", 3],                           // bar 4
+    ["G4", 2], ["B4", 1], ["D5", 2], ["G5", 1],     // bar 5
+    ["E5", 2], ["C5", 1], ["D5", 2], ["B4", 1],     // bar 6
+    ["C5", 2], ["A4", 1], ["B4", 2], ["A4", 1],     // bar 7
+    ["G4", 6],                                      // bar 8: home!
+  ];
+  // The chord for each bar: [bass note, the other notes of the chord]
+  const CHORDS = [
+    ["G2", ["G4", "B4", "D5"]], ["C3", ["G4", "C5", "E5"]],
+    ["G2", ["G4", "B4", "D5"]], ["D3", ["F#4", "A4", "D5"]],
+    ["G2", ["G4", "B4", "D5"]], ["C3", ["G4", "C5", "E5"]],
+    ["D3", ["F#4", "A4", "D5"]], ["G2", ["G4", "B4", "D5"]],
+  ];
+  const LILT = 0.2;                       // one little beat, in seconds
+  const LOOP = 8 * 6 * LILT;              // the whole tune: 8 bars (9.6 seconds)
+
+  // Play the tune once, starting 'start' seconds from now
+  function playTune(start, to) {
+    // the flute melody
+    let t = start;
+    for (const [note, beats] of MELODY) {
+      flute(HZ2[note], t, beats * LILT * 0.95, 0.11, to);
+      t += beats * LILT;
+    }
+    // under it, for every bar: OOM (the bass) on beat 1, PAH on beat 4,
+    // and quiet "plinks" of the chord on the other beats, like a guitar
+    CHORDS.forEach(([bass, notes], bar) => {
+      const b = start + bar * 6 * LILT;
+      const fifth = HZ2[bass] * 1.5;                     // the bass's "pah" note
+      beep(HZ2[bass], b, LILT * 1.6, "square", 0.05, to);
+      beep(fifth, b + 3 * LILT, LILT * 1.6, "square", 0.04, to);
+      [1, 2, 4, 5].forEach((beat, i) =>
+        beep(HZ2[notes[i % 3]], b + beat * LILT, LILT * 0.5, "square", 0.018, to));
+    });
+  }
+
   return {
     valkyries(seconds = 16) {
       wake();
@@ -87,6 +157,23 @@ const RightSounds = (() => {
       tuneVol = ctx.createGain(); tuneVol.gain.value = 0.9; tuneVol.connect(out);
       let t = 0.1, i = 0;
       while (t < seconds) { t += playBar(t, TUNE[i % TUNE.length]); i++; }
+    },
+
+    // The happy country tune, round and round, for 'seconds'
+    pastoral(seconds = 60) {
+      wake();
+      const t = ctx.currentTime;
+      if (countryVol) countryVol.disconnect();
+      countryVol = ctx.createGain(); countryVol.connect(out);
+      countryVol.gain.setValueAtTime(0, t);
+      countryVol.gain.linearRampToValueAtTime(1, t + 1);
+      for (let start = 0; start < seconds; start += LOOP) playTune(start, countryVol);
+    },
+
+    pastoralOff(seconds = 1.5) {
+      if (!countryVol) return;
+      countryVol.gain.setValueAtTime(countryVol.gain.value, ctx.currentTime);
+      countryVol.gain.linearRampToValueAtTime(0, ctx.currentTime + seconds);
     },
 
     valkyriesOff(seconds = 2) {

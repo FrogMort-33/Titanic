@@ -23,7 +23,11 @@
 //   30    WHOOSH: a lump of stray tyre rubber flies in from the top right,
 //   30.7  BOOP! bounces off the van (leaving a scuff), and flies off.
 //   32    Under the picture: the arrow and "Random tyre hitting the car".
-//   38    Fade out. (More to come!)
+//
+//   PANEL 3 - "IT'LL COME OFF IN THE WASH!"  (IMG-039, right-hand picture)
+//   38    Spud Enda, not worried at all, with the happy country tune
+//         from episode 8. Hold for 5...
+//   44    Fade out. (More to come!)
 //
 //  STORY RULE: the van travels LEFT to RIGHT (right to left is kept for
 //  its comedy retreat, later on).
@@ -45,7 +49,8 @@
     tyreIn: 30,           // (seconds from the START, like everything here)
     hit: 30.7,
     words: 32,
-    fadeOut: 38,
+    wash: 38,             // "It'll come off in the wash!"
+    fadeOut: 44,
   };
 
   const W = 1280, H = 900;          // size of the picture area
@@ -63,7 +68,7 @@
     preload() {
       const packed = window.ASSETS || {};
       const pic = (key, file) => this.load.image(key, packed[key] || "assets/" + file);
-      for (const key of ["rt_later", "rt_blank"]) pic(key, key + ".jpg");
+      for (const key of ["rt_later", "rt_blank", "rt_wash"]) pic(key, key + ".jpg");
       for (const key of ["rt_bus", "rt_plates", "rt_van", "rt_tyre", "rt_lump", "rt_scuff", "rt_words"])
         pic(key, key + ".png");
     }
@@ -84,8 +89,14 @@
       this.at(TIMES.interlude, () => { this.cut([0xf4, 0xea, 0xac]); this.showInterlude(); });
       this.at(TIMES.tyrePanel - 1, () => this.cameras.main.fadeOut(900, 0, 0, 0));
       this.at(TIMES.tyrePanel, () => { this.cut(); this.showTyre(); });
+      this.at(TIMES.wash - 0.8, () => { RightSounds.engineOff(0.8); this.cameras.main.fadeOut(700, 0, 0, 0); });
+      this.at(TIMES.wash, () => {
+        this.cut();
+        this.add.image(0, 0, "rt_wash").setOrigin(0);       // just the picture, held
+        RightSounds.pastoral(TIMES.fadeOut - TIMES.wash + 3);
+      });
       this.at(TIMES.fadeOut, () => {
-        RightSounds.engineOff(2);
+        RightSounds.pastoralOff(2.5);
         this.cameras.main.fadeOut(2500, 0, 0, 0);
         this.cameras.main.once("camerafadeoutcomplete", () => showEnd());  // in index.html / play-all.html
       });
