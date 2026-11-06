@@ -304,6 +304,79 @@ layout["ff_satnav2"]["w"], layout["ff_satnav2"]["h"] = smile_free.size
 layout["ff_beacon2"] = [s2.pt(850, 225)[0] + s2.x, s2.pt(850, 225)[1] + s2.y, round(26 * s2.zoom)]
 print("ff_satnav2.jpg", smile_free.size)
 
+# =====================================================================
+#  PART 3: TASHA AT HER WINDOW (IMG-054 from episode 9, master 19_4.jpg)
+#  The same two drawings of Tasha as episode 9, cut again bigger (full
+#  screen). The flames lick the sides of the van around her.
+# =====================================================================
+def patch_out(pic, hole, name):
+    """Rub out everything in 'hole' (smudging in the paper or crayon
+    colour from around it), and save the picture as a jpg."""
+    big = grow(hole, 9)
+    soft = np.asarray(Image.fromarray(np.clip(big, 0, 255).astype(np.uint8))
+                      .filter(ImageFilter.GaussianBlur(2)), np.float32)[..., None] / 255
+    # the colour to fill with: smudged in ONLY from clean bits outside the hole
+    good = ((grow(big, 9) < 10) & (pic.ink < 30)).astype(np.float32)
+    fill = fill_holes(pic.rgb, good)
+    fill = np.asarray(Image.fromarray(np.clip(fill, 0, 255).astype(np.uint8))
+                      .filter(ImageFilter.GaussianBlur(5)), np.float32)
+    fill = fill + rng.normal(0, 2.5, fill.shape[:2])[..., None]           # paper grain
+    clean = Image.fromarray(np.clip(pic.rgb * (1 - soft) + fill * soft, 0, 255).astype(np.uint8))
+    clean.save(OUT / (name + ".jpg"), quality=90)
+    pic.place(name, 0, 0)
+    layout[name]["w"], layout[name]["h"] = clean.size
+    print(name + ".jpg", clean.size)
+    return clean
+
+def cut_polys(pic, name, outlines):
+    """Like cut_seat, but the outline can be several pieces"""
+    a = np.zeros_like(pic.ink)
+    for o in outlines:
+        a = np.maximum(a, polygon_mask(pic.img.size, [pic.pt(x, y) for x, y in o], 1.0))
+    ys, xs = np.nonzero(a > 10)
+    b = (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)
+    save_png(name, pic.img.crop(b), a[b[1]:b[3], b[0]:b[2]])
+    pic.place(name, b[0], b[1])
+    pic.hole = np.maximum(pic.hole, a)
+
+
+tw = Picture("19_4.jpg", 0, (60, 108, 550, 615), W - 40, H - 20)
+cut_polys(tw, "tw_tasha1", [[(138, 380), (148, 325), (180, 284), (230, 261), (282, 256), (326, 274), (356, 304),
+                             (366, 362), (396, 476), (392, 484), (206, 484), (188, 440), (150, 410)],
+                            [(203, 492), (238, 492), (236, 515), (203, 515)],
+                            [(337, 492), (362, 492), (360, 512), (337, 512)]])
+# behind her: inside the window, plain paper; below it, the van's pink
+# crayon (copied in patches from the pink below the window); then the
+# window's left and bottom edges are drawn back in
+inside = box_hole(tw, (150, 220, 488, 482))
+big = grow(tw.hole, 9)
+hole_in = np.minimum(big, inside)
+hole_out = big * (inside < 10)
+tw.rgb = np.asarray(mend(tw, hole_in, (400, 240, 480, 470), 22), np.float32)   # paper texture from the empty right side
+tw.rgb = np.asarray(mend(tw, hole_out, (200, 520, 470, 600), 22), np.float32)
+win = Image.fromarray(np.clip(tw.rgb, 0, 255).astype(np.uint8))
+d = ImageDraw.Draw(win)
+d.line([tw.pt(153, 214), tw.pt(146, 330), tw.pt(132, 489)], fill=(40, 38, 36), width=round(1.6 * tw.zoom))
+d.line([tw.pt(132, 489), tw.pt(300, 486), tw.pt(465, 478)], fill=(40, 38, 36), width=round(1.6 * tw.zoom))
+win.save(OUT / "tw_window.jpg", quality=90)
+tw.place("tw_window", 0, 0)
+layout["tw_window"]["w"], layout["tw_window"]["h"] = win.size
+print("tw_window.jpg", win.size)
+# her second look (from the right-hand picture), sized and placed so its
+# window lines up with the first window
+W1 = (133, 211, 492, 489)
+W2 = (585, 218, 910, 489)
+k = (tw.pt(W1[2], 0)[0] - tw.pt(W1[0], 0)[0]) / (W2[2] - W2[0])     # screen pixels per working pixel
+t2 = Picture("19_4.jpg", 0, W2[:2] + (W2[2], 520), round((W2[2] - W2[0]) * k), 4000,
+             at_x=tw.pt(*W1[:2])[0] + tw.x, at_y=tw.pt(*W1[:2])[1] + tw.y)
+cut_polys(t2, "tw_tasha2", [[(598, 332), (614, 295), (650, 271), (700, 267), (742, 284), (762, 318), (767, 350),
+                             (792, 376), (830, 470), (836, 482), (668, 482), (650, 420), (640, 400), (604, 386)],
+                            [(652, 490), (684, 490), (682, 512), (652, 512)],
+                            [(763, 490), (793, 490), (791, 512), (763, 512)]])
+# the window (where the flames must NOT go) and the van's side, on the screen
+layout["tw_glass"] = [tw.pt(*W1[:2])[0] + tw.x, tw.pt(*W1[:2])[1] + tw.y,
+                      tw.pt(*W1[2:])[0] + tw.x, tw.pt(*W1[2:])[1] + tw.y]
+
 (SCENE / "layout.js").write_text(
     "// Made by tools/prepare_pictures.py - do not edit by hand.\n"
     "window.LAYOUT11 = " + json.dumps(layout, indent=1) + ";\n")

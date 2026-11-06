@@ -22,7 +22,11 @@
 //   39    ...switch to the next satnav picture: the wiggly "adventurous"
 //         road. The siren stops; the spooky horror tune (from episode 7)...
 //   40.5  ...and the satnav smiles:  ":)"   Hold...
-//   47    Fade out.
+//   46    New screen: Tasha at her side window again (from episode 9), big.
+//         Flames lick up the sides of the van all around her...
+//   48    ...her eyes follow something from left to right... she turns
+//         to look right, and shakes her head.
+//   56    Fade out.
 //
 //  To change WHEN things happen, change the numbers in TIMES below.
 // =====================================================================
@@ -44,7 +48,9 @@
     recalcRed: 34,        // ...now red
     satnav2: 39,          // the next satnav picture, with the horror tune
     smile: 40.5,          // ":)"
-    fadeOut: 47,
+    tasha: 46,            // Tasha at her window, flames all around
+    look: 48,             // she looks from left to right
+    fadeOut: 56,
   };
 
   const W = 1280, H = 900;          // size of the picture area
@@ -70,7 +76,8 @@
     preload() {
       const packed = window.ASSETS || {};
       const pic = (key, file) => this.load.image(key, packed[key] || "assets/" + file);
-      for (const key of ["ff_later", "ff_hills", "ff_satnav", "ff_satnav2"]) pic(key, key + ".jpg");
+      for (const key of ["ff_later", "ff_hills", "ff_satnav", "ff_satnav2", "tw_window"]) pic(key, key + ".jpg");
+      for (const key of ["tw_tasha1", "tw_tasha2"]) pic(key, key + ".png");
       for (const key of ["ff_flame1", "ff_flame2", "ff_flame3", "ff_flame", "ff_bus", "ff_satnav_words", "ff_smile"])
         pic(key, key + ".png");
     }
@@ -128,6 +135,8 @@
       });
       this.at(TIMES.satnav, () => { this.cut(); this.showSatnav(); });
       this.at(TIMES.satnav2, () => { this.cut(); this.showSatnav2(); });
+      this.at(TIMES.tasha - 0.6, () => cam.fadeOut(500, 0, 0, 0));
+      this.at(TIMES.tasha, () => { this.cut(); this.showTasha(); });
 
       // ---- the end ----
       this.at(TIMES.fadeOut, () => {
@@ -264,6 +273,76 @@
       this.at(TIMES.smile - t0, () => {
         const smile = this.placed("ff_smile").setAlpha(0);
         this.tweens.add({ targets: smile, alpha: 1, duration: 1500 });
+      });
+    }
+
+    // =====================================================================
+    //  TASHA AT HER WINDOW, with the flames licking the sides of the van
+    // =====================================================================
+    showTasha() {
+      const t0 = TIMES.tasha;                             // this part's start
+      const win = L.tw_window;
+      const [gx1, gy1, gx2, gy2] = L.tw_glass;            // the window glass (no flames there)
+      this.placed("tw_window");
+      const head = this.placed("tw_tasha1");
+      FierySounds.fire(TIMES.fadeOut - t0 + 1, 0.12);
+      // a "mask": the flames are only seen on the van, not the page around it
+      const shape = this.make.graphics({ add: false });
+      shape.fillStyle(0xffffff).fillRect(win.x, win.y, win.w, win.h);
+      const onVan = shape.createGeometryMask();
+
+      // ---- flames along the bottom and up both sides of the van. Each one
+      //      grows, flickers, and sometimes dies down and springs up again ----
+      const spots = [];
+      for (let x = win.x + 20; x < win.x + win.w; x += 75) spots.push([x + Math.random() * 30, win.y + win.h + 10]);   // along the bottom
+      for (let y = win.y + win.h - 60; y > gy1 + 120; y -= 120) {                                   // up the sides
+        spots.push([win.x + (gx1 - win.x) * Math.random(), y]);
+        spots.push([gx2 + (win.x + win.w - gx2) * Math.random(), y]);
+      }
+      spots.forEach(([x, y]) => {
+        // bigger at the bottom, smaller higher up
+        const size = 0.12 + 0.3 * (y - gy1) / (win.y + win.h - gy1) * (0.5 + Math.random() * 0.5);
+        const f = this.add.image(x, y, "ff_flame").setOrigin(0.5, 1).setScale(0).setMask(onVan);
+        this.tweens.add({ targets: f, scale: size, duration: 400 + Math.random() * 900, delay: Math.random() * 1500,
+                          ease: "Back.easeOut",
+          onComplete: () => this.tweens.add({ targets: f, scaleY: size * (1.15 + Math.random() * 0.4),
+                                              angle: { from: -4, to: 4 }, duration: 150 + Math.random() * 250,
+                                              ease: "Sine.easeInOut", yoyo: true, repeat: -1 }) });
+      });
+
+      // ---- flame tongues streaming past (the van is driving to the right,
+      //      so they blow back to the LEFT), over the lower part of the van ----
+      this.loops.push(this.time.addEvent({ delay: 650, loop: true, callback: () => {
+        const y = gy2 + 120 + Math.random() * (win.y + win.h - gy2 - 100);
+        const f = this.add.image(win.x + win.w + 40, y, "ff_flame").setOrigin(0.5, 1)
+          .setScale(0.12 + Math.random() * 0.15).setAngle(-25).setMask(onVan);
+        this.tweens.add({ targets: f, x: win.x - 80, duration: 1400 + Math.random() * 600,
+                          onComplete: () => f.destroy() });
+      } }));
+
+      // ---- the fire's orange light flickering over everything ----
+      const light = this.add.rectangle(0, 0, W, H, 0xff7a1a).setOrigin(0).setAlpha(0.08)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: light, alpha: 0.22, duration: 140, yoyo: true, repeat: -1, repeatDelay: 90 });
+
+      // ---- Tasha looks out: from the left... to the right ----
+      const h0 = head.x;
+      head.x -= 50;                                     // looking back to the LEFT first
+      this.at(TIMES.look - t0, () => {
+        this.tweens.add({ targets: head, x: h0 + 20, duration: 1800, ease: "Sine.easeInOut" });
+        this.time.delayedCall(1300, () => {
+          // she turns to look RIGHT (the second drawing), still moving
+          const head2 = this.placed("tw_tasha2").setAlpha(0);
+          this.children.moveBelow(head2, light);
+          const x2 = head2.x;
+          head2.x = x2 - 20;
+          this.tweens.add({ targets: head2, alpha: 1, x: x2 + 20, duration: 700, ease: "Sine.easeOut" });
+          this.tweens.add({ targets: head, alpha: 0, duration: 500 });
+          FierySounds.worry();
+          // disbelief: a little shake of the head
+          this.time.delayedCall(1200, () =>
+            this.tweens.add({ targets: head2, angle: { from: -3, to: 3 }, duration: 160, yoyo: true, repeat: 7 }));
+        });
       });
     }
   }
