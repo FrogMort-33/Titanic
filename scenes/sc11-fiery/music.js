@@ -11,6 +11,8 @@
 //    FierySounds.pastoralOff(s)   fade it away
 //    FierySounds.fire(secs, vol)  a roaring, crackling fire
 //    FierySounds.siren(secs)      a French "pin-pon" siren
+//    FierySounds.horror(secs)     the spooky 8-bit organ tune from episode 7
+//    FierySounds.horrorOff(s)     fade it away
 //    FierySounds.tada()           "ta-DA!" for the pop-up picture
 //    FierySounds.pop()            a quick "bloop" as something pops up
 //    FierySounds.engine(secs)     the van's engine ticking over: brrrrm
@@ -52,6 +54,7 @@ const FierySounds = (() => {
   let tuneVol = null;      // volume knob for the Valkyries
   let engineVol = null;    // volume knob for the engine
   let countryVol = null;   // volume knob for the country tune
+  let horrorVol = null;    // volume knob for the spooky tune (from episode 7)
 
   function wake() {
     // One shared audio engine for the whole page (iPad only lets a tap
@@ -539,6 +542,59 @@ const FierySounds = (() => {
         beep(870, x, 0.45, "square", 0.07);         // PIN
         beep(650, x + 0.45, 0.45, "square", 0.07);  // PON
       }
+    },
+
+    // ================= HORROR (the same tune as episode 7) =================
+    // Our own spooky tune, in a minor key, on a wheezy 8-bit "organ"
+    // (two square waves slightly out of tune with each other = wobbly)
+    horror(seconds = 8) {
+      wake();
+      if (horrorVol) horrorVol.disconnect();
+      horrorVol = ctx.createGain(); horrorVol.gain.value = 0.9; horrorVol.connect(out);
+      const BEAT = 0.32;
+      // the notes it uses (Hz)
+      const NOTE = { D5: 587.33, F5: 698.46, A5: 880.00, "G#5": 830.61, G5: 783.99, E5: 659.25, "C#5": 554.37,
+                     A4: 440.00, Bb4: 466.16, G4: 392.00, F4: 349.23, E4: 329.63, D4: 293.66,
+                     D3: 146.83, Bb2: 116.54, G2: 98.00, A2: 110.00 };
+      const TUNE = [["D5", 1], ["F5", 1], ["A5", 1], ["G#5", 3], ["G5", 1], ["F5", 1], ["E5", 1], ["C#5", 3],
+                    ["D5", 1], ["A4", 1], ["Bb4", 1], ["G4", 2], ["F4", 1], ["E4", 1], ["D4", 4]];
+      const BASS = ["D3", "D3", "Bb2", "Bb2", "G2", "G2", "A2", "A2"];
+      let t = 0.05, i = 0;
+      while (t < seconds) {
+        const [n, beats] = TUNE[i % TUNE.length];
+        const len = beats * BEAT * 0.95;
+        organ(NOTE[n], t, len);
+        t += beats * BEAT; i++;
+      }
+      for (let tb = 0.05, b = 0; tb < seconds; tb += 2 * BEAT, b++) {
+        const n = NOTE[BASS[b % BASS.length]];
+        [0, 1].forEach((k) => {                    // "doom... doom"
+          const tt = ctx.currentTime + tb + k * BEAT;
+          const o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = n;
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.25, tt); g.gain.exponentialRampToValueAtTime(0.001, tt + BEAT * 0.9);
+          o.connect(g).connect(horrorVol); o.start(tt); o.stop(tt + BEAT);
+        });
+      }
+      function organ(freq, when, len) {
+        const tt = ctx.currentTime + when;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, tt);
+        g.gain.linearRampToValueAtTime(0.035, tt + 0.03);
+        g.gain.setValueAtTime(0.035, tt + len * 0.8);
+        g.gain.linearRampToValueAtTime(0, tt + len);
+        g.connect(horrorVol);
+        for (const detune of [-8, 8]) {             // two, slightly apart
+          const o = ctx.createOscillator(); o.type = "square";
+          o.frequency.value = freq; o.detune.value = detune;
+          o.connect(g); o.start(tt); o.stop(tt + len + 0.02);
+        }
+      }
+    },
+    horrorOff(seconds = 1.5) {
+      if (!horrorVol) return;
+      horrorVol.gain.setValueAtTime(horrorVol.gain.value, ctx.currentTime);
+      horrorVol.gain.linearRampToValueAtTime(0, ctx.currentTime + seconds);
     },
   };
 })();

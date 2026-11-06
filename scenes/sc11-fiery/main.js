@@ -19,7 +19,10 @@
 //   31.5  PIN-PON! A siren, and in the middle of the screen, flashing:
 //         "RECALCULATING JOURNEY" - yellow...
 //   34    ...then RED. Hold for 5...
-//   39.5  Fade out.
+//   39    ...switch to the next satnav picture: the wiggly "adventurous"
+//         road. The siren stops; the spooky horror tune (from episode 7)...
+//   40.5  ...and the satnav smiles:  ":)"   Hold...
+//   47    Fade out.
 //
 //  To change WHEN things happen, change the numbers in TIMES below.
 // =====================================================================
@@ -39,7 +42,9 @@
     wordsFor: 4.5,        // ...line by line, over this long
     recalc: 31.5,         // PIN-PON! "RECALCULATING JOURNEY" (yellow)
     recalcRed: 34,        // ...now red
-    fadeOut: 39.5,
+    satnav2: 39,          // the next satnav picture, with the horror tune
+    smile: 40.5,          // ":)"
+    fadeOut: 47,
   };
 
   const W = 1280, H = 900;          // size of the picture area
@@ -65,8 +70,8 @@
     preload() {
       const packed = window.ASSETS || {};
       const pic = (key, file) => this.load.image(key, packed[key] || "assets/" + file);
-      for (const key of ["ff_later", "ff_hills", "ff_satnav"]) pic(key, key + ".jpg");
-      for (const key of ["ff_flame1", "ff_flame2", "ff_flame3", "ff_flame", "ff_bus", "ff_satnav_words"])
+      for (const key of ["ff_later", "ff_hills", "ff_satnav", "ff_satnav2"]) pic(key, key + ".jpg");
+      for (const key of ["ff_flame1", "ff_flame2", "ff_flame3", "ff_flame", "ff_bus", "ff_satnav_words", "ff_smile"])
         pic(key, key + ".png");
     }
 
@@ -122,9 +127,11 @@
         cam.fadeOut(500, 0, 0, 0);
       });
       this.at(TIMES.satnav, () => { this.cut(); this.showSatnav(); });
+      this.at(TIMES.satnav2, () => { this.cut(); this.showSatnav2(); });
 
       // ---- the end ----
       this.at(TIMES.fadeOut, () => {
+        FierySounds.horrorOff(2.5);
         cam.fadeOut(2500, 0, 0, 0);
         cam.once("camerafadeoutcomplete", () => showEnd());   // in index.html / play-all.html
       });
@@ -227,7 +234,7 @@
 
       // PIN-PON! "RECALCULATING JOURNEY", flashing in the middle of the screen
       this.at(TIMES.recalc - t0, () => {
-        FierySounds.siren(TIMES.fadeOut - TIMES.recalc + 2);
+        FierySounds.siren(TIMES.satnav2 - TIMES.recalc);
         const big = this.add.text(W / 2, H / 2, "RECALCULATING\nJOURNEY", {
           fontFamily: "Arial Black, Arial, sans-serif", fontSize: "96px", color: "#ffe81f", align: "center",
           stroke: "#1c1a18", strokeThickness: 14 }).setOrigin(0.5);
@@ -239,6 +246,24 @@
           big.setColor("#ff2a1a");
           this.cameras.main.flash(200, 255, 40, 20);
         });
+      });
+    }
+
+    // The next satnav picture: the wiggly road... and a smile. Spooky.
+    showSatnav2() {
+      const t0 = TIMES.satnav2;                           // this part's start
+      this.cameras.main.resetFX();
+      this.cameras.main.flash(250, 0, 0, 0);
+      FierySounds.horror(TIMES.fadeOut - t0 + 3);
+      this.placed("ff_satnav2");
+      // its warning light flashes, slower now
+      const [bx, by, br] = L.ff_beacon2;
+      const glow = this.add.circle(bx, by, br, 0xffe81f).setAlpha(0);
+      this.tweens.add({ targets: glow, alpha: 0.6, duration: 450, yoyo: true, repeat: -1, repeatDelay: 300 });
+      // ":)" - it slowly appears
+      this.at(TIMES.smile - t0, () => {
+        const smile = this.placed("ff_smile").setAlpha(0);
+        this.tweens.add({ targets: smile, alpha: 1, duration: 1500 });
       });
     }
   }

@@ -287,6 +287,23 @@ layout["ff_satnav"]["w"], layout["ff_satnav"]["h"] = clean.size
 layout["ff_beacon"] = [sn.pt(381, 211)[0] + sn.x, sn.pt(381, 211)[1] + sn.y, round(26 * sn.zoom)]   # the flashing light
 print("ff_satnav.jpg", clean.size)
 
+# ---- the right-hand satnav panel: the wiggly "adventurous" road, and
+#      "Satnav: :)" - the smile appears on its own ----
+s2 = Picture("23_3.jpg", 0, (507, 95, 949, 640), W - 40, H - 20)
+s2.words("ff_smile", (660, 503, 748, 598), INKC)                  # ":)"
+hole = box_hole(s2, (657, 500, 751, 601))
+near = s2.pbox((560, 495, 860, 610))                      # the paper around it (not the ink)
+nb = np.zeros(s2.ink.shape, bool); nb[near[1]:near[3], near[0]:near[2]] = True
+colour = np.median(s2.rgb[nb & (grow(s2.ink, 9) < 15)], axis=0)
+soft = np.asarray(Image.fromarray(hole.astype(np.uint8)).filter(ImageFilter.GaussianBlur(6)), np.float32)[..., None] / 255
+fill = colour + rng.normal(0, 2.5, s2.rgb.shape[:2])[..., None]
+smile_free = Image.fromarray(np.clip(s2.rgb * (1 - soft) + fill * soft, 0, 255).astype(np.uint8))
+smile_free.save(OUT / "ff_satnav2.jpg", quality=90)
+s2.place("ff_satnav2", 0, 0)
+layout["ff_satnav2"]["w"], layout["ff_satnav2"]["h"] = smile_free.size
+layout["ff_beacon2"] = [s2.pt(850, 225)[0] + s2.x, s2.pt(850, 225)[1] + s2.y, round(26 * s2.zoom)]
+print("ff_satnav2.jpg", smile_free.size)
+
 (SCENE / "layout.js").write_text(
     "// Made by tools/prepare_pictures.py - do not edit by hand.\n"
     "window.LAYOUT11 = " + json.dumps(layout, indent=1) + ";\n")
