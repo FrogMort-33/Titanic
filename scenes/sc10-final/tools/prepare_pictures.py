@@ -520,6 +520,44 @@ road.save(OUT / "sv_road.jpg", quality=90); rp.place("sv_road", 0, 0)
 layout["sv_road"]["w"], layout["sv_road"]["h"] = road.size
 print("sv_road.jpg", road.size)
 
+# =====================================================================
+#  PART 5: "MEANWHILE, ENDA WAS TOTALLY FINE." (IMG-062, master 22_2.jpg)
+#  The camera zooms in on Enda in the little panel above until he is the
+#  same size as in this close-up, then we swap to it: Enda (left) and
+#  his thought - a frog in a boiling pot (right).
+# =====================================================================
+fg = Picture("22_2.jpg", 0, (110, 55, 1000, 740), W, H)
+round_patch(fg, "fg_mouth", (352, 497, 388, 517))
+disc_patch(fg, "fg_wheel", (300, 640), 88)
+fg.words("fg_meanwhile", (612, 595, 935, 730), INKC)      # "Meanwhile, Enda was totally fine." and the arrow
+# everything OUTSIDE the two pictures (the yellow page, and the corner of
+# the van picture from before) becomes our own plain yellow page; the empty
+# top-left corner is where Enda's words will go
+fg.rgb = np.asarray(paper_fill(fg, box_hole(fg, (608, 592, 940, 735)), 5), np.float32)   # rub out the caption
+keep = np.maximum(polygon_mask(fg.img.size, [fg.pt(x, y) for x, y in
+                                             [(117, 337), (503, 335), (505, 722), (117, 724)]], 0),
+                  polygon_mask(fg.img.size, [fg.pt(x, y) for x, y in
+                                             [(505, 126), (583, 126), (583, 65), (962, 62), (972, 580), (505, 584)]], 0))
+soft = np.asarray(Image.fromarray(keep.astype(np.uint8)).filter(ImageFilter.GaussianBlur(2)), np.float32)[..., None] / 255
+fill = np.array(PAPER, np.float32) + rng.normal(0, 2.5, fg.rgb.shape[:2])[..., None]
+frog = Image.fromarray(np.clip(fg.rgb * soft + fill * (1 - soft), 0, 255).astype(np.uint8))
+frog.save(OUT / "fg_frog.jpg", quality=90); fg.place("fg_frog", 0, 0)
+layout["fg_frog"]["w"], layout["fg_frog"]["h"] = frog.size
+print("fg_frog.jpg", frog.size)
+# where things are, on the screen, for the animation:
+def on_screen(p, x, y):
+    return [p.pt(x, y)[0] + p.x, p.pt(x, y)[1] + p.y]
+layout["fg_face"] = on_screen(fg, 125, 345) + on_screen(fg, 495, 720)       # Enda's face, big
+layout["fg_drops"] = [on_screen(fg, x, y) for x, y in [(152, 472), (138, 492), (450, 496), (444, 512)]]
+layout["fg_pot"] = on_screen(fg, 755, 235)                                 # the top of the pot
+layout["fg_potw"] = fg.pt(860, 0)[0] - fg.pt(670, 0)[0]                    # how wide the pot is
+layout["sv_face"] = on_screen(ap, 548, 322) + on_screen(ap, 612, 405)       # Enda's face, small (part 4)
+
+# Enda's line, lifted from the little panel in part 4 (master 22_1.jpg),
+# to go in the empty top-left corner
+fl = Picture("22_1.jpg", 90, (470, 412, 662, 487), 520, 210, at_x=fg.x + 40, at_y=fg.y + 90)
+fl.words("fg_line", (470, 412, 662, 487), INKC)          # "I'm like a frog in boiling water!"
+
 (SCENE / "layout.js").write_text(
     "// Made by tools/prepare_pictures.py - do not edit by hand.\n"
     "window.LAYOUT10 = " + json.dumps(layout, indent=1) + ";\n")

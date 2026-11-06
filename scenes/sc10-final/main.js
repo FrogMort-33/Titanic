@@ -56,8 +56,17 @@
 //  121    The top picture changes to the next little panel...
 //  122    ...Annelisa: "Do you need a break? After all the running people
 //         over, bashing the car up?..."
-//  ~128   The van bops off the right of the road picture. Hold...
-//  132    Fade out.
+//  ~128   The van bops off the right of the road picture.
+//
+//   PART 5 - "MEANWHILE, ENDA WAS TOTALLY FINE."  (IMG-062)
+//  127    The camera zooms in on Enda in the little panel until he's the
+//         same size as in the big close-up...
+//  130    ...then swap: Enda full size (left), thinking about a frog in a
+//         boiling pot (right). Bubbles rise, sweat drips, the wheel turns.
+//  131.5  "Meanwhile, Enda was totally fine."
+//  134    Enda: "I'm like a frog in boiling water!"
+//  137.5  An EDITOR'S NOTE pops up to explain.
+//  150    Fade out.
 //
 //  To change WHEN things happen, change the numbers in TIMES below.
 //  To change how FAST the vehicles go, change SPEED below.
@@ -106,7 +115,15 @@
     annTalk: 122,         // ...Annelisa: "Do you need a break? ..."
     annFor: 4.5,
     vanGone: 128,         // the van is off the right of the road picture by now
-    fadeOut: 132,
+    // PART 5 - Meanwhile, Enda was totally fine
+    zoomEnda: 127,        // zoom in on Enda...
+    zoomFor: 2.6,         // ...taking this long
+    frog: 130,            // swap to the big Enda + his frog thought
+    meanwhile: 131.5,     // "Meanwhile, Enda was totally fine."
+    frogLine: 134,        // Enda: "I'm like a frog in boiling water!"
+    frogFor: 3,
+    note: 137.5,          // the editor's note pops up
+    fadeOut: 150,
   };
 
   const SPEED = {         // in screen pixels per second, along the road
@@ -159,7 +176,8 @@
       pic("fd_road", "fd_road.jpg");
       for (const key of ["tb_later", "tb_booth", "tb_inside", "tb_frame1", "tb_frame2", "tb_frame3"]) pic(key, key + ".jpg");
       pic("et_town", "et_town.jpg");
-      for (const key of ["sv_four", "sv_two", "sv_road"]) pic(key, key + ".jpg");
+      for (const key of ["sv_four", "sv_two", "sv_road", "fg_frog"]) pic(key, key + ".jpg");
+      for (const key of ["fg_mouth", "fg_wheel", "fg_meanwhile", "fg_line"]) pic(key, key + ".png");
       for (const key of ["sv_mouth_rosie", "sv_mouth_enda", "sv_wheel_a", "sv_dvt", "sv_foot", "sv_mouth_ann",
                          "sv_wheel_b", "sv_break", "sv_van"])
         pic(key, key + ".png");
@@ -311,6 +329,8 @@
       this.at(TIMES.convoy, () => { this.cut(); this.showConvoy(); });
       this.at(TIMES.dvt - 0.8, () => { FinalSounds.valkyriesOff(0.8); cam.fadeOut(700, 0, 0, 0); });
       this.at(TIMES.dvt, () => { this.cut(); this.showServices(); });
+      this.at(TIMES.zoomEnda, () => this.zoomOnEnda());
+      this.at(TIMES.frog, () => { this.cut(); this.showFrog(); });
 
       // ---- the end ----
       this.at(TIMES.fadeOut, () => {
@@ -759,6 +779,95 @@
           this.talk(ann, TIMES.annFor, 1.1);
         });
       });
+    }
+
+    // =====================================================================
+    //  PART 5 - "MEANWHILE, ENDA WAS TOTALLY FINE."
+    // =====================================================================
+
+    // Zoom the camera in on little Enda (top right of the picture) until
+    // his face is exactly where - and as big as - the big Enda's face will
+    // be in the next picture. Then the swap is seamless.
+    zoomOnEnda() {
+      const cam = this.cameras.main;
+      const [a1, b1, a2, b2] = L.sv_face;          // little Enda's face (left, top, right, bottom)
+      const [c1, d1, c2, d2] = L.fg_face;          // big Enda's face
+      const zoom = (c2 - c1) / (a2 - a1);          // how much bigger he needs to be
+      // The camera looks at a point (its middle). We pick the point that
+      // puts little Enda's face where big Enda's face will be:
+      const midX = (a1 + a2) / 2 - ((c1 + c2) / 2 - W / 2) / zoom;
+      const midY = (b1 + b2) / 2 - ((d1 + d2) / 2 - H / 2) / zoom;
+      cam.pan(midX, midY, TIMES.zoomFor * 1000, "Cubic.easeInOut");
+      cam.zoomTo(zoom, TIMES.zoomFor * 1000, "Cubic.easeInOut");
+    }
+
+    showFrog() {
+      const t0 = TIMES.frog;                              // this part's start
+      const cam = this.cameras.main;
+      cam.setZoom(1).centerOn(W / 2, H / 2);              // camera back to normal...
+      cam.resetFX();
+      cam.flash(350, 255, 255, 255);                      // ...with a dreamy white flash
+      FinalSounds.boing();
+
+      this.placed("fg_frog");
+      const mouth = this.mouthAt("fg_mouth");
+      this.steer("fg_wheel");
+
+      // ---- bubbles rise out of the pot, over and over ----
+      const [px, py] = L.fg_pot;
+      this.loops.push(this.time.addEvent({ delay: 260, loop: true, callback: () => {
+        const b = this.add.circle(px + (Math.random() - 0.5) * L.fg_potw * 0.8, py, 4 + Math.random() * 7, 0x6cc4e8)
+          .setStrokeStyle(2, 0x2a6f9a);
+        this.tweens.add({ targets: b, y: py - 70 - Math.random() * 60, x: b.x + (Math.random() - 0.5) * 30,
+                          alpha: { from: 1, to: 0 }, duration: 1300, ease: "Sine.easeOut",
+                          onComplete: () => b.destroy() });
+      } }));
+
+      // ---- sweat drips down his face (new drops, over and over) ----
+      this.loops.push(this.time.addEvent({ delay: 700, loop: true, callback: () => {
+        const [dx, dy] = Phaser.Utils.Array.GetRandom(L.fg_drops);
+        const drop = this.add.ellipse(dx, dy, 9, 14, 0x5fc0dc).setStrokeStyle(1.5, 0x2a6f9a);
+        this.tweens.add({ targets: drop, y: dy + 70, alpha: { from: 1, to: 0 }, duration: 1500, ease: "Quad.easeIn",
+                          onComplete: () => drop.destroy() });
+      } }));
+
+      // ---- "Meanwhile, Enda was totally fine." ----
+      this.at(TIMES.meanwhile - t0, () => {
+        const words = this.placed("fg_meanwhile").setAlpha(0);
+        this.tweens.add({ targets: words, alpha: 1, duration: 900 });
+      });
+
+      // ---- Enda: "I'm like a frog in boiling water!" ----
+      this.at(TIMES.frogLine - t0, () => {
+        this.pop("fg_line");
+        this.talk(mouth, TIMES.frogFor, 0.8);
+      });
+
+      // ---- the EDITOR'S NOTE pops up ----
+      this.at(TIMES.note - t0, () => this.editorsNote());
+    }
+
+    // A "toast": a little card that pops up with a note from the editor
+    editorsNote() {
+      const x = 930, y = 575, w = 660, h = 300;           // its middle, and its size
+      const card = this.add.container(x, y);
+      const shadow = this.add.graphics().fillStyle(0x000000, 0.25).fillRoundedRect(-w / 2 + 8, -h / 2 + 8, w, h, 18);
+      const back = this.add.graphics().fillStyle(0xfffbe6).fillRoundedRect(-w / 2, -h / 2, w, h, 18)
+        .lineStyle(4, 0x1c1a18).strokeRoundedRect(-w / 2, -h / 2, w, h, 18);
+      const title = this.add.text(-w / 2 + 22, -h / 2 + 16, "✎ EDITOR'S NOTE",
+        { fontFamily: "Arial Black, Arial, sans-serif", fontSize: "28px", color: "#c0392b" });
+      const note = this.add.text(-w / 2 + 22, -h / 2 + 62,
+        "* Theory suggests that if you place a frog in water and boil the water slowly, " +
+        "the frog will not notice and will carry on as usual. This is NOT a recommendation " +
+        "for a French cooking technique, but a philosophical view on how well we can endure " +
+        "a slow build-up of stress.",
+        { fontFamily: "Arial, sans-serif", fontSize: "24px", color: "#1c1a18", lineSpacing: 5,
+          wordWrap: { width: w - 44 } });
+      card.add([shadow, back, title, note]);
+      // it pops in, with a bounce (and a ta-da!)
+      this.tweens.add({ targets: card, scale: { from: 0.2, to: 1 }, alpha: { from: 0, to: 1 }, duration: 450,
+                        ease: "Back.easeOut" });
+      FinalSounds.tada();
     }
   }
 
